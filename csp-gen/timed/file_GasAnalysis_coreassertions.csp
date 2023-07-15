@@ -1,0 +1,20 @@
+include "file_GasAnalysis.csp"
+
+-- generate GasAnalysis
+P_GasAnalysis = let
+	id__ = 0
+	
+	
+	
+within
+	GasAnalysis::O__(
+		id__,
+		const_GasAnalysis_thr
+	)
+assert P_GasAnalysis :[deadlock-free]	
+assert P_GasAnalysis;RUN({r__}) :[deadlock-free]
+assert P_GasAnalysis :[deterministic]
+assert P_GasAnalysis :[divergence-free]
+
+
+

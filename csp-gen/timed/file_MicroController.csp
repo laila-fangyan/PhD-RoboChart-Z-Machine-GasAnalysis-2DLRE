@@ -1,0 +1,18 @@
+include "defs/timed_definitions.csp"
+include "defs/core_defs.csp"
+include "defs/file_Module_defs.csp"
+include "defs/file_GasAnalysis_defs.csp"
+include "defs/sequence_toolkit_defs.csp"
+include "defs/Chemical_defs.csp"
+include "defs/file_MainController_defs.csp"
+include "defs/file_Movement_defs.csp"
+include "defs/function_toolkit_defs.csp"
+include "defs/robochart_defs.csp"
+include "defs/file_MicroController.csp"
+include "defs/file_MicroController_defs.csp"
+include "defs/Location_defs.csp"
+include "defs/set_toolkit_defs.csp"
+include "instantiations.csp"
+include "defs/relation_toolkit_defs.csp"
+		
+channel r__

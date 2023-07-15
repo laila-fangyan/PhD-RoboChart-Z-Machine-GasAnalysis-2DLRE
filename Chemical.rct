@@ -1,0 +1,39 @@
+package Chemical
+
+//THIS IS the original version of chemical.rct
+import sequence_toolkit::*
+enumeration Angle { Left Right Back Front }
+
+type Chem
+type Intensity
+datatype GasSensor {
+     c : Chem
+	 i : Intensity }
+enumeration Status {noGas gasD} 
+
+//Analyze whether there is gas or not
+function analysis( gs : Seq( GasSensor )) : Status {
+}
+function goreq(  i1 : Intensity , i2 : Intensity) : boolean {
+	postcondition result == (i1 > i2)
+}
+
+//function goreq_1(  i1 : Intensity , i2 : Intensity) : boolean {
+	//postcondition if i1 > i2 then result == true else result == false end
+//}
+//Return the highest intensity
+function intensity( gs : Seq( GasSensor )) : Intensity {
+	precondition size ( gs ) > 0
+	postcondition forall x : nat | 0 < x /\ x <= size ( gs ) @ goreq ( result , gs [ x ] . i )
+	postcondition exists y: nat | 0 < y /\ y <= size (gs) @ result == gs[y].i
+}
+function location( gs : Seq( GasSensor )) : Angle {
+	precondition size ( gs ) > 0
+	postcondition exists x : nat | 0 < x /\ x <= size ( gs ) @ gs [ x ] . i == intensity ( gs ) /\ result == angle ( x )
+}
+function angle( x : nat) : Angle { 
+	precondition 0< x <=360
+	postcondition if 0< x< 90 then result ==Front else if 90<= x<180 then result ==Right else if 180<= x< 270 then result ==Back	else result==Left end end end }
+
+function card(A:Set(?X)): nat {
+}

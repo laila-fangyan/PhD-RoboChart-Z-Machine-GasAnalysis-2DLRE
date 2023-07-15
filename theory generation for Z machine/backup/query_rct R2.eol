@@ -1,0 +1,58 @@
+var alice = new Tuple;
+alice.name = "Alice";
+alice.age = 32;
+alice.println();
+
+
+
+"Query withing the Chemical package".println();
+
+for (p in RC!RCPackage) {
+ if (p.name="Chemical"){
+ 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//query the states
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the states".println();
+var k=0;
+var state_set: OrderedSet;
+// type 'Set' is not working as it add the new element in random order, 
+//not always add to the end but may insert in the middle somewhere
+var enum_output: String;
+var set_output: String;
+for (st in RC!State.allInstances)
+{
+("state_" + k+": "+st.name).println();
+state_set.add(st.name);
+//("state_set: "+ state_set).println();
+enum_output= enum_output+ state_set.at(k) +" | ";
+set_output= set_output+ state_set.at(k) +", ";
+//("OUTPUT: "+ output).println();
+k++;
+}
+
+//to add the context for thy file "enumtype ProperState = "
+//to add the initial, initial is a juction, not a state, so can not be queried through state
+//to cut the last vertical bar
+enum_output= "enumtype ProperState = initial | " + enum_output.substring(0,(enum_output.length()-2));
+("FINAL OUTPUT: "+ enum_output).println();
+set_output= "definition \"ProperState = {initial, " + set_output.substring(0,(set_output.length()-2))+"}\"";
+("FINAL OUTPUT: "+ set_output).println();
+
+
+
+ for (f in p.functions)
+{ 
+f.name.println();
+}
+ 
+ 
+ 
+ for (e in p.types)
+{
+e.type().name.println();
+("e.name: " + e.name).println();
+ }
+}
+}
+

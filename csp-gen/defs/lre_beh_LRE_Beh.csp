@@ -1,0 +1,1627 @@
+module lre_beh_LRE_Beh
+exports
+	-- flow channels
+	channel internal__ : TIDS
+	channel enteredV, enterV, exitV, exitedV : SIDS
+	channel enter, entered: SIDS.SIDS
+	channel exit,exited: SIDS.SIDS
+	channel terminate
+	
+	-- variable channels
+	channel get_pos, set_pos: {(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel get_vel, set_vel: {(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel get_reqV, set_reqV: {(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+			
+	-- shared variable channels
+	
+	-- local variable channels for defined operations that are required by the state machine
+	
+	-- declaring state machine events
+	channel endTask__: TIDS.InOut
+	channel endTask: InOut
+	channel reqOCM__: TIDS.InOut
+	channel reqOCM: InOut
+	channel reqMOM__: TIDS.InOut
+	channel reqMOM: InOut
+	channel reqVel__: TIDS.InOut.{(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel reqVel: InOut.{(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel advVel__: TIDS.InOut.{(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel advVel: InOut.{(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel position__: TIDS.InOut.{(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel position: InOut.{(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	
+	-- declaring call and ret events for undefined operations
+	channel CalcCloseObsCall
+	channel AdvVelCall: core_real
+	
+	-- Only the undefined operations are declared here.
+	-- If the state machine is in isolation, all required operations will be undefined.
+	-- If it is in the context of a controller, the required operations not provided by the
+	-- controller will be declared here, and the defined operations will be defined in the
+	-- context of the Controller module, and therefore within scope of the state machien module.
+	CALL__CalcCloseObs(id__) =  CalcCloseObsCall -> SKIP
+	
+	CALL__AdvVel(id__,
+			    v) =  AdvVelCall.v -> SKIP
+	
+	
+	
+	-- definition of functions used to expose flow channels
+	ShowEvents(P,E) = P[[ entered.x____.y____ <- enteredV.y____ | entered.x____.y____ <- E]]
+					   [[ enter.x____.y____ <- enterV.y____ | enter.x____.y____ <- E]]
+					   [[ exit.x____.y____ <- exitV.y____ | exit.x____.y____ <- E]]
+					   [[ exited.x____.y____ <- exitedV.y____ | exited.x____.y____ <- E ]]
+						 
+	ShowEnteredV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowEnterV(P) = P[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitV(P) = P[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitedV(P) = P[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+				[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	
+	-- declaring identifiers of state and final states
+	datatype SIDS = SID_LRE_Beh
+	              | SID_LRE_Beh_OCM
+	              | SID_LRE_Beh_MOM
+	              | SID_LRE_Beh_HCM
+	              | SID_LRE_Beh_CAM
+	
+	-- declaring identifiers of transitions
+	datatype TIDS = NULLTRANSITION__
+	              | TID_LRE_Beh_t0
+	              | TID_LRE_Beh_t1
+	              | TID_LRE_Beh_t2
+	              | TID_LRE_Beh_t3
+	              | TID_LRE_Beh_t4
+	              | TID_LRE_Beh_t7
+	              | TID_LRE_Beh_t8
+	              | TID_LRE_Beh_t10
+	              | TID_LRE_Beh_t11
+	              | TID_LRE_Beh_t13
+	              | TID_LRE_Beh_t14
+	              | TID_LRE_Beh_t15
+	              | TID_LRE_Beh_t16
+	              | TID_LRE_Beh_t17
+	              | TID_LRE_Beh_t5
+	              | TID_LRE_Beh_t9
+	              | TID_LRE_Beh_t12
+	              | TID_LRE_Beh_t18
+	
+	-- declaring identifiers of transitions that can interupt a state (excludes transitions from junctions)
+	
+	ITIDS = {
+		TID_LRE_Beh_t1,	TID_LRE_Beh_t2,	TID_LRE_Beh_t3,	TID_LRE_Beh_t4,	TID_LRE_Beh_t7,	TID_LRE_Beh_t8,	TID_LRE_Beh_t10,	TID_LRE_Beh_t11,	TID_LRE_Beh_t13,	TID_LRE_Beh_t14,	TID_LRE_Beh_t15,	TID_LRE_Beh_t16,	TID_LRE_Beh_t17,	TID_LRE_Beh_t5,	TID_LRE_Beh_t9,	TID_LRE_Beh_t12,	TID_LRE_Beh_t18
+	}
+	
+	int_int = {|
+		endTask__.TID_LRE_Beh_t1,
+		reqOCM__.TID_LRE_Beh_t1,
+		reqMOM__.TID_LRE_Beh_t1,
+		reqVel__.TID_LRE_Beh_t1,
+		advVel__.TID_LRE_Beh_t1,
+		position__.TID_LRE_Beh_t1,
+		internal__.TID_LRE_Beh_t1,
+		endTask__.TID_LRE_Beh_t2,
+		reqOCM__.TID_LRE_Beh_t2,
+		reqMOM__.TID_LRE_Beh_t2,
+		reqVel__.TID_LRE_Beh_t2,
+		advVel__.TID_LRE_Beh_t2,
+		position__.TID_LRE_Beh_t2,
+		internal__.TID_LRE_Beh_t2,
+		endTask__.TID_LRE_Beh_t3,
+		reqOCM__.TID_LRE_Beh_t3,
+		reqMOM__.TID_LRE_Beh_t3,
+		reqVel__.TID_LRE_Beh_t3,
+		advVel__.TID_LRE_Beh_t3,
+		position__.TID_LRE_Beh_t3,
+		internal__.TID_LRE_Beh_t3,
+		endTask__.TID_LRE_Beh_t4,
+		reqOCM__.TID_LRE_Beh_t4,
+		reqMOM__.TID_LRE_Beh_t4,
+		reqVel__.TID_LRE_Beh_t4,
+		advVel__.TID_LRE_Beh_t4,
+		position__.TID_LRE_Beh_t4,
+		internal__.TID_LRE_Beh_t4,
+		endTask__.TID_LRE_Beh_t7,
+		reqOCM__.TID_LRE_Beh_t7,
+		reqMOM__.TID_LRE_Beh_t7,
+		reqVel__.TID_LRE_Beh_t7,
+		advVel__.TID_LRE_Beh_t7,
+		position__.TID_LRE_Beh_t7,
+		internal__.TID_LRE_Beh_t7,
+		endTask__.TID_LRE_Beh_t8,
+		reqOCM__.TID_LRE_Beh_t8,
+		reqMOM__.TID_LRE_Beh_t8,
+		reqVel__.TID_LRE_Beh_t8,
+		advVel__.TID_LRE_Beh_t8,
+		position__.TID_LRE_Beh_t8,
+		internal__.TID_LRE_Beh_t8,
+		endTask__.TID_LRE_Beh_t10,
+		reqOCM__.TID_LRE_Beh_t10,
+		reqMOM__.TID_LRE_Beh_t10,
+		reqVel__.TID_LRE_Beh_t10,
+		advVel__.TID_LRE_Beh_t10,
+		position__.TID_LRE_Beh_t10,
+		internal__.TID_LRE_Beh_t10,
+		endTask__.TID_LRE_Beh_t11,
+		reqOCM__.TID_LRE_Beh_t11,
+		reqMOM__.TID_LRE_Beh_t11,
+		reqVel__.TID_LRE_Beh_t11,
+		advVel__.TID_LRE_Beh_t11,
+		position__.TID_LRE_Beh_t11,
+		internal__.TID_LRE_Beh_t11,
+		endTask__.TID_LRE_Beh_t13,
+		reqOCM__.TID_LRE_Beh_t13,
+		reqMOM__.TID_LRE_Beh_t13,
+		reqVel__.TID_LRE_Beh_t13,
+		advVel__.TID_LRE_Beh_t13,
+		position__.TID_LRE_Beh_t13,
+		internal__.TID_LRE_Beh_t13,
+		endTask__.TID_LRE_Beh_t14,
+		reqOCM__.TID_LRE_Beh_t14,
+		reqMOM__.TID_LRE_Beh_t14,
+		reqVel__.TID_LRE_Beh_t14,
+		advVel__.TID_LRE_Beh_t14,
+		position__.TID_LRE_Beh_t14,
+		internal__.TID_LRE_Beh_t14,
+		endTask__.TID_LRE_Beh_t15,
+		reqOCM__.TID_LRE_Beh_t15,
+		reqMOM__.TID_LRE_Beh_t15,
+		reqVel__.TID_LRE_Beh_t15,
+		advVel__.TID_LRE_Beh_t15,
+		position__.TID_LRE_Beh_t15,
+		internal__.TID_LRE_Beh_t15,
+		endTask__.TID_LRE_Beh_t16,
+		reqOCM__.TID_LRE_Beh_t16,
+		reqMOM__.TID_LRE_Beh_t16,
+		reqVel__.TID_LRE_Beh_t16,
+		advVel__.TID_LRE_Beh_t16,
+		position__.TID_LRE_Beh_t16,
+		internal__.TID_LRE_Beh_t16,
+		endTask__.TID_LRE_Beh_t17,
+		reqOCM__.TID_LRE_Beh_t17,
+		reqMOM__.TID_LRE_Beh_t17,
+		reqVel__.TID_LRE_Beh_t17,
+		advVel__.TID_LRE_Beh_t17,
+		position__.TID_LRE_Beh_t17,
+		internal__.TID_LRE_Beh_t17,
+		endTask__.TID_LRE_Beh_t5,
+		reqOCM__.TID_LRE_Beh_t5,
+		reqMOM__.TID_LRE_Beh_t5,
+		reqVel__.TID_LRE_Beh_t5,
+		advVel__.TID_LRE_Beh_t5,
+		position__.TID_LRE_Beh_t5,
+		internal__.TID_LRE_Beh_t5,
+		endTask__.TID_LRE_Beh_t9,
+		reqOCM__.TID_LRE_Beh_t9,
+		reqMOM__.TID_LRE_Beh_t9,
+		reqVel__.TID_LRE_Beh_t9,
+		advVel__.TID_LRE_Beh_t9,
+		position__.TID_LRE_Beh_t9,
+		internal__.TID_LRE_Beh_t9,
+		endTask__.TID_LRE_Beh_t12,
+		reqOCM__.TID_LRE_Beh_t12,
+		reqMOM__.TID_LRE_Beh_t12,
+		reqVel__.TID_LRE_Beh_t12,
+		advVel__.TID_LRE_Beh_t12,
+		position__.TID_LRE_Beh_t12,
+		internal__.TID_LRE_Beh_t12,
+		endTask__.TID_LRE_Beh_t18,
+		reqOCM__.TID_LRE_Beh_t18,
+		reqMOM__.TID_LRE_Beh_t18,
+		reqVel__.TID_LRE_Beh_t18,
+		advVel__.TID_LRE_Beh_t18,
+		position__.TID_LRE_Beh_t18,
+		internal__.TID_LRE_Beh_t18
+	|}
+		
+	
+	internal_events = {|enter,entered,exit,exited|}
+	shared_variable_events = {|
+	|}
+			
+	
+	-- declaring all states
+	CS_LRE_Beh_OCM_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_LRE_Beh_OCM,SID_LRE_Beh_MOM,SID_LRE_Beh_HCM,SID_LRE_Beh_CAM},
+		y____ <- {SID_LRE_Beh_OCM}
+	|}
+	
+	
+	LRE_Beh_OCM_triggers = {|
+		internal__.TID_LRE_Beh_t14,
+		internal__.TID_LRE_Beh_t7,
+		reqMOM__.TID_LRE_Beh_t1,
+		reqOCM__.TID_LRE_Beh_t3,
+		internal__.TID_LRE_Beh_t10,
+		endTask__.TID_LRE_Beh_t13,
+		reqOCM__.TID_LRE_Beh_t2,
+		internal__.TID_LRE_Beh_t16,
+		internal__.TID_LRE_Beh_t8,
+		internal__.TID_LRE_Beh_t5,
+		internal__.TID_LRE_Beh_t18,
+		reqVel__.TID_LRE_Beh_t11,
+		internal__.TID_LRE_Beh_t12,
+		reqOCM__.TID_LRE_Beh_t17,
+		internal__.TID_LRE_Beh_t15,
+		internal__.TID_LRE_Beh_t4,
+		internal__.TID_LRE_Beh_t9
+	|}
+	
+	State_LRE_Beh_OCM(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = let
+		T_LRE_Beh_t1(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = reqMOM__!TID_LRE_Beh_t1.in ->  (exit.SID_LRE_Beh_OCM.SID_LRE_Beh_OCM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_OCM.SID_LRE_Beh_OCM -> SKIP;
+							enter!SID_LRE_Beh_OCM!SID_LRE_Beh_MOM -> entered!SID_LRE_Beh_OCM!SID_LRE_Beh_MOM ->
+							State_LRE_Beh_OCM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		)
+		T_LRE_Beh_t11(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = reqVel__!TID_LRE_Beh_t11.in?reqV -> set_reqV!reqV ->  (exit.SID_LRE_Beh_OCM.SID_LRE_Beh_OCM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_OCM.SID_LRE_Beh_OCM -> SKIP;
+							get_reqV?reqV -> true&(advVel.out!reqV -> SKIP);get_reqV?reqV -> true & (set_vel!reqV -> SKIP);enter!SID_LRE_Beh_OCM!SID_LRE_Beh_OCM -> State_LRE_Beh_OCM_execute(id__,SID_LRE_Beh_OCM)
+		)
+		State_LRE_Beh_OCM_execute(id__,o____) = SKIP; 
+			entered!o____!SID_LRE_Beh_OCM ->
+			(SKIP; STOP /\ (
+				T_LRE_Beh_t1(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t11(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9}) -> exit?y____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_OCM -> SKIP);
+						State_LRE_Beh_OCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] endTask__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_OCM -> SKIP);
+						State_LRE_Beh_OCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqOCM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_OCM -> SKIP);
+						State_LRE_Beh_OCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqMOM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_OCM -> SKIP);
+						State_LRE_Beh_OCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_OCM -> SKIP);
+						State_LRE_Beh_OCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] advVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_OCM -> SKIP);
+						State_LRE_Beh_OCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] position__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_OCM -> SKIP);
+						State_LRE_Beh_OCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_LRE_Beh_OCM})!SID_LRE_Beh_OCM -> (State_LRE_Beh_OCM_execute(id__,x____))
+	
+	CS_LRE_Beh_MOM_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_LRE_Beh_OCM,SID_LRE_Beh_MOM,SID_LRE_Beh_HCM,SID_LRE_Beh_CAM},
+		y____ <- {SID_LRE_Beh_MOM}
+	|}
+	
+	
+	LRE_Beh_MOM_triggers = {|
+		internal__.TID_LRE_Beh_t14,
+		internal__.TID_LRE_Beh_t7,
+		reqMOM__.TID_LRE_Beh_t1,
+		reqOCM__.TID_LRE_Beh_t3,
+		internal__.TID_LRE_Beh_t10,
+		endTask__.TID_LRE_Beh_t13,
+		reqOCM__.TID_LRE_Beh_t2,
+		internal__.TID_LRE_Beh_t16,
+		internal__.TID_LRE_Beh_t8,
+		internal__.TID_LRE_Beh_t5,
+		internal__.TID_LRE_Beh_t18,
+		reqVel__.TID_LRE_Beh_t11,
+		internal__.TID_LRE_Beh_t12,
+		reqOCM__.TID_LRE_Beh_t17,
+		internal__.TID_LRE_Beh_t15,
+		internal__.TID_LRE_Beh_t4,
+		internal__.TID_LRE_Beh_t9
+	|}
+	
+	State_LRE_Beh_MOM(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = let
+		T_LRE_Beh_t2(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = reqOCM__!TID_LRE_Beh_t2.in ->  (exit.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							enter!SID_LRE_Beh_MOM!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh_MOM!SID_LRE_Beh_OCM ->
+							State_LRE_Beh_MOM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		)
+		T_LRE_Beh_t4(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t4 ->  exit.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							enter!SID_LRE_Beh_MOM!SID_LRE_Beh_HCM -> entered!SID_LRE_Beh_MOM!SID_LRE_Beh_HCM ->
+							State_LRE_Beh_MOM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		T_LRE_Beh_t7(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t7 ->  exit.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							enter!SID_LRE_Beh_MOM!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh_MOM!SID_LRE_Beh_OCM ->
+							State_LRE_Beh_MOM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		T_LRE_Beh_t13(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = endTask__!TID_LRE_Beh_t13.in ->  (exit.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							true&(advVel.out!(0,0) -> SKIP);true & (set_vel!(0,0) -> SKIP);enter!SID_LRE_Beh_MOM!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh_MOM!SID_LRE_Beh_OCM ->
+							State_LRE_Beh_MOM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		)
+		T_LRE_Beh_t15(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t15 ->  exit.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							enter!SID_LRE_Beh_MOM!SID_LRE_Beh_CAM -> entered!SID_LRE_Beh_MOM!SID_LRE_Beh_CAM ->
+							State_LRE_Beh_MOM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		T_LRE_Beh_t9(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t9 ->  exit.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_MOM.SID_LRE_Beh_MOM -> SKIP;
+							enter!SID_LRE_Beh_MOM!SID_LRE_Beh_CAM -> entered!SID_LRE_Beh_MOM!SID_LRE_Beh_CAM ->
+							State_LRE_Beh_MOM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		State_LRE_Beh_MOM_execute(id__,o____) = get_vel?vel -> true&(advVel.out!lre_beh_setVel(vel,const_lre_beh_LRE_Beh_MOMVel) -> SKIP);get_vel?vel -> true & (set_vel!lre_beh_setVel(vel,const_lre_beh_LRE_Beh_MOMVel) -> SKIP); 
+			entered!o____!SID_LRE_Beh_MOM ->
+			(SKIP; STOP /\ (
+				T_LRE_Beh_t2(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t4(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t7(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t13(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t15(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t9(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9}) -> exit?y____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_MOM -> SKIP);
+						State_LRE_Beh_MOM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] endTask__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_MOM -> SKIP);
+						State_LRE_Beh_MOM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqOCM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_MOM -> SKIP);
+						State_LRE_Beh_MOM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqMOM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_MOM -> SKIP);
+						State_LRE_Beh_MOM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_MOM -> SKIP);
+						State_LRE_Beh_MOM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] advVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_MOM -> SKIP);
+						State_LRE_Beh_MOM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] position__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_MOM -> SKIP);
+						State_LRE_Beh_MOM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_LRE_Beh_MOM})!SID_LRE_Beh_MOM -> (State_LRE_Beh_MOM_execute(id__,x____))
+	
+	CS_LRE_Beh_HCM_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_LRE_Beh_OCM,SID_LRE_Beh_MOM,SID_LRE_Beh_HCM,SID_LRE_Beh_CAM},
+		y____ <- {SID_LRE_Beh_HCM}
+	|}
+	
+	
+	LRE_Beh_HCM_triggers = {|
+		internal__.TID_LRE_Beh_t14,
+		internal__.TID_LRE_Beh_t7,
+		reqMOM__.TID_LRE_Beh_t1,
+		reqOCM__.TID_LRE_Beh_t3,
+		internal__.TID_LRE_Beh_t10,
+		endTask__.TID_LRE_Beh_t13,
+		reqOCM__.TID_LRE_Beh_t2,
+		internal__.TID_LRE_Beh_t16,
+		internal__.TID_LRE_Beh_t8,
+		internal__.TID_LRE_Beh_t5,
+		internal__.TID_LRE_Beh_t18,
+		reqVel__.TID_LRE_Beh_t11,
+		internal__.TID_LRE_Beh_t12,
+		reqOCM__.TID_LRE_Beh_t17,
+		internal__.TID_LRE_Beh_t15,
+		internal__.TID_LRE_Beh_t4,
+		internal__.TID_LRE_Beh_t9
+	|}
+	
+	State_LRE_Beh_HCM(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = let
+		T_LRE_Beh_t3(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = reqOCM__!TID_LRE_Beh_t3.in ->  (exit.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							enter!SID_LRE_Beh_HCM!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh_HCM!SID_LRE_Beh_OCM ->
+							State_LRE_Beh_HCM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		)
+		T_LRE_Beh_t8(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t8 ->  exit.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							enter!SID_LRE_Beh_HCM!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh_HCM!SID_LRE_Beh_OCM ->
+							State_LRE_Beh_HCM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		T_LRE_Beh_t10(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t10 ->  exit.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							enter!SID_LRE_Beh_HCM!SID_LRE_Beh_MOM -> entered!SID_LRE_Beh_HCM!SID_LRE_Beh_MOM ->
+							State_LRE_Beh_HCM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		T_LRE_Beh_t14(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t14 ->  exit.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							enter!SID_LRE_Beh_HCM!SID_LRE_Beh_CAM -> entered!SID_LRE_Beh_HCM!SID_LRE_Beh_CAM ->
+							State_LRE_Beh_HCM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		T_LRE_Beh_t12(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t12 ->  exit.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_HCM.SID_LRE_Beh_HCM -> SKIP;
+							enter!SID_LRE_Beh_HCM!SID_LRE_Beh_CAM -> entered!SID_LRE_Beh_HCM!SID_LRE_Beh_CAM ->
+							State_LRE_Beh_HCM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		State_LRE_Beh_HCM_execute(id__,o____) = get_vel?vel -> true&(advVel.out!lre_beh_setVel(vel,const_lre_beh_LRE_Beh_HCMVel) -> SKIP);get_vel?vel -> true & (set_vel!lre_beh_setVel(vel,const_lre_beh_LRE_Beh_HCMVel) -> SKIP); 
+			entered!o____!SID_LRE_Beh_HCM ->
+			(SKIP; STOP /\ (
+				T_LRE_Beh_t3(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t8(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t10(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t14(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t12(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9}) -> exit?y____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_HCM -> SKIP);
+						State_LRE_Beh_HCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] endTask__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_HCM -> SKIP);
+						State_LRE_Beh_HCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqOCM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_HCM -> SKIP);
+						State_LRE_Beh_HCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqMOM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_HCM -> SKIP);
+						State_LRE_Beh_HCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_HCM -> SKIP);
+						State_LRE_Beh_HCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] advVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_HCM -> SKIP);
+						State_LRE_Beh_HCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] position__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t2,TID_LRE_Beh_t16,TID_LRE_Beh_t8,TID_LRE_Beh_t5,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_HCM -> SKIP);
+						State_LRE_Beh_HCM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_LRE_Beh_HCM})!SID_LRE_Beh_HCM -> (State_LRE_Beh_HCM_execute(id__,x____))
+	
+	CS_LRE_Beh_CAM_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_LRE_Beh_OCM,SID_LRE_Beh_MOM,SID_LRE_Beh_HCM,SID_LRE_Beh_CAM},
+		y____ <- {SID_LRE_Beh_CAM}
+	|}
+	
+	
+	LRE_Beh_CAM_triggers = {|
+		internal__.TID_LRE_Beh_t14,
+		internal__.TID_LRE_Beh_t7,
+		reqMOM__.TID_LRE_Beh_t1,
+		reqOCM__.TID_LRE_Beh_t3,
+		internal__.TID_LRE_Beh_t10,
+		endTask__.TID_LRE_Beh_t13,
+		internal__.TID_LRE_Beh_t16,
+		reqOCM__.TID_LRE_Beh_t2,
+		internal__.TID_LRE_Beh_t5,
+		internal__.TID_LRE_Beh_t8,
+		internal__.TID_LRE_Beh_t18,
+		reqVel__.TID_LRE_Beh_t11,
+		internal__.TID_LRE_Beh_t12,
+		reqOCM__.TID_LRE_Beh_t17,
+		internal__.TID_LRE_Beh_t15,
+		internal__.TID_LRE_Beh_t4,
+		internal__.TID_LRE_Beh_t9
+	|}
+	
+	State_LRE_Beh_CAM(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = let
+		T_LRE_Beh_t16(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t16 ->  exit.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							true&(advVel.out!(0,0) -> SKIP);true & (set_vel!(0,0) -> SKIP);enter!SID_LRE_Beh_CAM!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh_CAM!SID_LRE_Beh_OCM ->
+							State_LRE_Beh_CAM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		T_LRE_Beh_t17(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = reqOCM__!TID_LRE_Beh_t17.in ->  (exit.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							enter!SID_LRE_Beh_CAM!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh_CAM!SID_LRE_Beh_OCM ->
+							State_LRE_Beh_CAM(id__,
+									    const_lre_beh_LRE_Beh_StaticObsDist,
+									    const_lre_beh_LRE_Beh_MinSafeDist,
+									    const_lre_beh_LRE_Beh_HCMVel,
+									    const_lre_beh_LRE_Beh_MOMVel,
+									    const_lre_beh_LRE_Beh_Obsts)
+		)
+		T_LRE_Beh_t5(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t5 ->  exit.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							enter!SID_LRE_Beh_CAM!SID_LRE_Beh_CAM -> State_LRE_Beh_CAM_execute(id__,SID_LRE_Beh_CAM)
+		T_LRE_Beh_t18(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t18 ->  exit.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							SKIP;exited.SID_LRE_Beh_CAM.SID_LRE_Beh_CAM -> SKIP;
+							enter!SID_LRE_Beh_CAM!SID_LRE_Beh_CAM -> State_LRE_Beh_CAM_execute(id__,SID_LRE_Beh_CAM)
+		State_LRE_Beh_CAM_execute(id__,o____) = get_vel?vel -> true&(advVel.out!lre_beh_maneuv(vel) -> SKIP);get_vel?vel -> true & (set_vel!lre_beh_maneuv(vel) -> SKIP); 
+			entered!o____!SID_LRE_Beh_CAM ->
+			(SKIP; STOP /\ (
+				T_LRE_Beh_t16(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t17(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t5(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)[]
+				T_LRE_Beh_t18(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t16,TID_LRE_Beh_t2,TID_LRE_Beh_t5,TID_LRE_Beh_t8,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9}) -> exit?y____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_CAM -> SKIP);
+						State_LRE_Beh_CAM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] endTask__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t16,TID_LRE_Beh_t2,TID_LRE_Beh_t5,TID_LRE_Beh_t8,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_CAM -> SKIP);
+						State_LRE_Beh_CAM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqOCM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t16,TID_LRE_Beh_t2,TID_LRE_Beh_t5,TID_LRE_Beh_t8,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_CAM -> SKIP);
+						State_LRE_Beh_CAM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqMOM__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t16,TID_LRE_Beh_t2,TID_LRE_Beh_t5,TID_LRE_Beh_t8,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_CAM -> SKIP);
+						State_LRE_Beh_CAM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] reqVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t16,TID_LRE_Beh_t2,TID_LRE_Beh_t5,TID_LRE_Beh_t8,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_CAM -> SKIP);
+						State_LRE_Beh_CAM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] advVel__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t16,TID_LRE_Beh_t2,TID_LRE_Beh_t5,TID_LRE_Beh_t8,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_CAM -> SKIP);
+						State_LRE_Beh_CAM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+				[] position__?x____:diff(ITIDS,{NULLTRANSITION__,TID_LRE_Beh_t14,TID_LRE_Beh_t7,TID_LRE_Beh_t1,TID_LRE_Beh_t3,TID_LRE_Beh_t10,TID_LRE_Beh_t13,TID_LRE_Beh_t16,TID_LRE_Beh_t2,TID_LRE_Beh_t5,TID_LRE_Beh_t8,TID_LRE_Beh_t18,TID_LRE_Beh_t11,TID_LRE_Beh_t12,TID_LRE_Beh_t17,TID_LRE_Beh_t15,TID_LRE_Beh_t4,TID_LRE_Beh_t9})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (
+						SKIP;
+						exited!y____!SID_LRE_Beh_CAM -> SKIP);
+						State_LRE_Beh_CAM(id__,
+								    const_lre_beh_LRE_Beh_StaticObsDist,
+								    const_lre_beh_LRE_Beh_MinSafeDist,
+								    const_lre_beh_LRE_Beh_HCMVel,
+								    const_lre_beh_LRE_Beh_MOMVel,
+								    const_lre_beh_LRE_Beh_Obsts)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_LRE_Beh_CAM})!SID_LRE_Beh_CAM -> (State_LRE_Beh_CAM_execute(id__,x____))
+	
+	
+	I_LRE_Beh_i0(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = let
+		T_LRE_Beh_t0(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts) = internal__!TID_LRE_Beh_t0 -> enter!SID_LRE_Beh!SID_LRE_Beh_OCM -> entered!SID_LRE_Beh!SID_LRE_Beh_OCM ->
+		SKIP
+	within
+		T_LRE_Beh_t0(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)
+	
+	
+	State_LRE_Beh_OCM_R(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = 
+		State_LRE_Beh_OCM(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)
+			[|diff(int_int,LRE_Beh_OCM_triggers)|]
+		SKIP
+			 		
+	State_LRE_Beh_MOM_R(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = 
+		State_LRE_Beh_MOM(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)
+			[|diff(int_int,LRE_Beh_MOM_triggers)|]
+		SKIP
+			 		
+	State_LRE_Beh_HCM_R(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = 
+		State_LRE_Beh_HCM(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)
+			[|diff(int_int,LRE_Beh_HCM_triggers)|]
+		SKIP
+			 		
+	State_LRE_Beh_CAM_R(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = 
+		State_LRE_Beh_CAM(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)
+			[|diff(int_int,LRE_Beh_CAM_triggers)|]
+		SKIP
+			 		
+		
+	STM(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = (
+		I_LRE_Beh_i0(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)
+			[|
+				{|enter.x____.y____, entered.x____.y____, exit.x____.y____, exited.x____.y____ |
+					x____ <- diff(SIDS,{SID_LRE_Beh_OCM,SID_LRE_Beh_MOM,SID_LRE_Beh_HCM,SID_LRE_Beh_CAM}),
+					y____ <- {SID_LRE_Beh_OCM,SID_LRE_Beh_MOM,SID_LRE_Beh_HCM,SID_LRE_Beh_CAM}
+			|}|]
+		(
+			State_LRE_Beh_OCM_R(id__,
+					    const_lre_beh_LRE_Beh_StaticObsDist,
+					    const_lre_beh_LRE_Beh_MinSafeDist,
+					    const_lre_beh_LRE_Beh_HCMVel,
+					    const_lre_beh_LRE_Beh_MOMVel,
+					    const_lre_beh_LRE_Beh_Obsts)
+				[|inter(CS_LRE_Beh_OCM_sync,union(union(CS_LRE_Beh_MOM_sync,CS_LRE_Beh_HCM_sync),CS_LRE_Beh_CAM_sync))|]
+			(
+				State_LRE_Beh_MOM_R(id__,
+						    const_lre_beh_LRE_Beh_StaticObsDist,
+						    const_lre_beh_LRE_Beh_MinSafeDist,
+						    const_lre_beh_LRE_Beh_HCMVel,
+						    const_lre_beh_LRE_Beh_MOMVel,
+						    const_lre_beh_LRE_Beh_Obsts)
+					[|inter(CS_LRE_Beh_MOM_sync,union(CS_LRE_Beh_HCM_sync,CS_LRE_Beh_CAM_sync))|]
+				(
+					State_LRE_Beh_HCM_R(id__,
+							    const_lre_beh_LRE_Beh_StaticObsDist,
+							    const_lre_beh_LRE_Beh_MinSafeDist,
+							    const_lre_beh_LRE_Beh_HCMVel,
+							    const_lre_beh_LRE_Beh_MOMVel,
+							    const_lre_beh_LRE_Beh_Obsts)
+						[|inter(CS_LRE_Beh_HCM_sync,CS_LRE_Beh_CAM_sync)|]
+					State_LRE_Beh_CAM_R(id__,
+							    const_lre_beh_LRE_Beh_StaticObsDist,
+							    const_lre_beh_LRE_Beh_MinSafeDist,
+							    const_lre_beh_LRE_Beh_HCMVel,
+							    const_lre_beh_LRE_Beh_MOMVel,
+							    const_lre_beh_LRE_Beh_Obsts)
+				)
+			)
+		)
+	)
+	
+	-- optimized memory process
+	channel getV_pos: {(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel getV_vel: {(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	channel getV_reqV: {(x0__,x1__) | x0__ <- core_real,x1__ <- core_real}
+	
+	-- individual memory processes
+	Memory_pos(pos) = (
+		get_pos!pos -> Memory_pos(pos)
+		[]
+		getV_pos!pos -> Memory_pos(pos)
+		[]
+		set_pos?x__ -> Memory_pos(x__)
+	)
+	Memory_vel(vel) = (
+		get_vel!vel -> Memory_vel(vel)
+		[]
+		getV_vel!vel -> Memory_vel(vel)
+		[]
+		set_vel?x__ -> Memory_vel(x__)
+	)
+	Memory_reqV(reqV) = (
+		get_reqV!reqV -> Memory_reqV(reqV)
+		[]
+		getV_reqV!reqV -> Memory_reqV(reqV)
+		[]
+		set_reqV?x__ -> Memory_reqV(x__)
+		[]
+		reqVel__!TID_LRE_Beh_t11.in?reqV -> Memory_reqV(reqV)
+	)
+	
+	-- processes that read variables and offer transitions
+	MemoryTransitions(id__, pos
+				, vel
+				, reqV
+				,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = 		
+	(internal__!TID_LRE_Beh_t0 -> SKIP
+	[]
+	((((Plus(Mult(tuple2_1(vel), tuple2_1(vel), core_real), Mult(tuple2_2(vel), tuple2_2(vel), core_real), core_real)<=Mult(3, 3, core_nat)) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>10)) and (not ((lre_beh_inOPEZ(pos))))))&(reqMOM__!TID_LRE_Beh_t1.in -> SKIP)
+	[]
+	reqOCM__!TID_LRE_Beh_t2.in -> SKIP
+	[]
+	reqOCM__!TID_LRE_Beh_t3.in -> SKIP
+	[]
+	(((((Plus(Mult(tuple2_1(vel), tuple2_1(vel), core_real), Mult(tuple2_2(vel), tuple2_2(vel), core_real), core_real)>Mult(3, 3, core_nat)) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)) and (lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist)) and (not (lre_beh_inOPEZ(pos)))))&(internal__!TID_LRE_Beh_t4 -> SKIP)
+	[]
+	((lre_beh_inOPEZ(pos) and (((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist) or (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>const_lre_beh_LRE_Beh_StaticObsDist)))))&(internal__!TID_LRE_Beh_t7 -> SKIP)
+	[]
+	((lre_beh_inOPEZ(pos) and (((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist) or (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>const_lre_beh_LRE_Beh_StaticObsDist)))))&(internal__!TID_LRE_Beh_t8 -> SKIP)
+	[]
+	(((lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>const_lre_beh_LRE_Beh_StaticObsDist) and (not (lre_beh_inOPEZ(pos)))))&(internal__!TID_LRE_Beh_t10 -> SKIP)
+	[]
+	reqVel__!TID_LRE_Beh_t11.in?reqV -> SKIP
+	[]
+	endTask__!TID_LRE_Beh_t13.in -> SKIP
+	[]
+	(((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)<=const_lre_beh_LRE_Beh_MinSafeDist) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)))&(internal__!TID_LRE_Beh_t14 -> SKIP)
+	[]
+	(((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)<=const_lre_beh_LRE_Beh_MinSafeDist) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)))&(internal__!TID_LRE_Beh_t15 -> SKIP)
+	[]
+	((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist))&(internal__!TID_LRE_Beh_t16 -> SKIP)
+	[]
+	reqOCM__!TID_LRE_Beh_t17.in -> SKIP
+	[]
+	(((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)<=const_lre_beh_LRE_Beh_MinSafeDist) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)))&(internal__!TID_LRE_Beh_t5 -> SKIP)
+	[]
+	(((((Plus(tuple2_1(pos), tuple2_1(vel), core_real)<0) or (Plus(tuple2_1(pos), tuple2_1(vel), core_real)>99)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)<0)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)>99)))&(internal__!TID_LRE_Beh_t9 -> SKIP)
+	[]
+	(((((Plus(tuple2_1(pos), tuple2_1(vel), core_real)<0) or (Plus(tuple2_1(pos), tuple2_1(vel), core_real)>99)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)<0)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)>99)))&(internal__!TID_LRE_Beh_t12 -> SKIP)
+	[]
+	(((((Plus(tuple2_1(pos), tuple2_1(vel), core_real)<0) or (Plus(tuple2_1(pos), tuple2_1(vel), core_real)>99)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)<0)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)>99)))&(internal__!TID_LRE_Beh_t18 -> SKIP)[]
+	set_pos?x__ -> SKIP[]
+	set_vel?x__ -> SKIP[]
+	set_reqV?x__ -> SKIP)
+	
+	MemoryTransitions_LRE_Beh(id__, const_lre_beh_LRE_Beh_StaticObsDist, const_lre_beh_LRE_Beh_MinSafeDist, const_lre_beh_LRE_Beh_HCMVel, const_lre_beh_LRE_Beh_MOMVel, const_lre_beh_LRE_Beh_Obsts) = (getV_pos?pos ->
+	getV_vel?vel ->
+	getV_reqV?reqV ->
+	MemoryTransitions(id__, pos
+				, vel
+				, reqV
+				,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts); MemoryTransitions_LRE_Beh(id__, const_lre_beh_LRE_Beh_StaticObsDist, const_lre_beh_LRE_Beh_MinSafeDist, const_lre_beh_LRE_Beh_HCMVel, const_lre_beh_LRE_Beh_MOMVel, const_lre_beh_LRE_Beh_Obsts))			
+	
+	-- synchronisation, hiding and process sets 
+	MemoryVariablesProcesses_LRE_Beh = Union(
+		{
+			{
+				(Memory_pos((0,0)),{|get_pos,set_pos,getV_pos|}),
+				(Memory_vel((0,0)),{|set_vel,getV_vel,get_vel|}),
+				(Memory_reqV((0,0)),{|get_reqV,reqVel__.TID_LRE_Beh_t11,getV_reqV,set_reqV|})
+			}
+		}
+	)
+	
+	MemoryVariablesSyncSet = Union({
+		{|
+			set_pos,
+			reqVel__.TID_LRE_Beh_t11,
+			getV_reqV,
+			set_vel,
+			getV_vel,
+			set_reqV,
+			getV_pos
+		|}	
+	})
+	
+	MemoryVariablesHideSet = Union({
+		{|
+			getV_reqV,
+			getV_vel,
+			getV_pos
+		|}
+	})
+	
+	-- combined individual memory processes
+	MemoryVariables = ||| (P, alpha) : MemoryVariablesProcesses_LRE_Beh @ P
+	
+	-- complete memory process	
+	MemoryN(id__, const_lre_beh_LRE_Beh_StaticObsDist, const_lre_beh_LRE_Beh_MinSafeDist, const_lre_beh_LRE_Beh_HCMVel, const_lre_beh_LRE_Beh_MOMVel, const_lre_beh_LRE_Beh_Obsts) = sbisim(diamond((sbisim(diamond(MemoryVariables)) [| MemoryVariablesSyncSet |] sbisim(diamond(MemoryTransitions_LRE_Beh(id__, const_lre_beh_LRE_Beh_StaticObsDist, const_lre_beh_LRE_Beh_MinSafeDist, const_lre_beh_LRE_Beh_HCMVel, const_lre_beh_LRE_Beh_MOMVel, const_lre_beh_LRE_Beh_Obsts)))) \ MemoryVariablesHideSet))
+	
+	-- optimised memory
+	-- Sets of named elements identified according to transition conditions:
+	-- {MinSafeDist,vel,StaticObsDist,Obsts,pos}
+	-- {}
+	-- Summary of all identified named elements:
+	-- {
+	-- MinSafeDist
+	-- vel
+	-- StaticObsDist
+	-- Obsts
+	-- reqV
+	-- pos
+	-- }
+	
+	-- Allocation plan:
+	-- 1:{MinSafeDist,vel,StaticObsDist,Obsts,pos}
+	--	=> {
+	--		TID_LRE_Beh_t18,
+	--		TID_LRE_Beh_t14,
+	--		TID_LRE_Beh_t7,
+	--		TID_LRE_Beh_t1,
+	--		TID_LRE_Beh_t12,
+	--		TID_LRE_Beh_t15,
+	--		TID_LRE_Beh_t10,
+	--		TID_LRE_Beh_t4,
+	--		TID_LRE_Beh_t9,
+	--		TID_LRE_Beh_t16,
+	--		TID_LRE_Beh_t8,
+	--		TID_LRE_Beh_t5}
+	-- 0:{}
+	--	=> {
+	--		TID_LRE_Beh_t11,
+	--		TID_LRE_Beh_t3,
+	--		TID_LRE_Beh_t0,
+	--		TID_LRE_Beh_t17,
+	--		TID_LRE_Beh_t13,
+	--		TID_LRE_Beh_t2}
+	
+	-- Memory transition processes
+	MemoryTransitions_opt_1(id__,
+		 const_lre_beh_LRE_Beh_MinSafeDist,
+		 const_lre_beh_LRE_Beh_StaticObsDist,
+		 const_lre_beh_LRE_Beh_Obsts) =
+	(
+		let
+			Update = 
+			get_vel?vel ->
+			get_pos?pos ->
+			Current(id__,
+				 vel,
+				 pos)
+			Current(id__,
+				 vel,
+				 pos)
+			 	   = 
+			 	   (((((Plus(tuple2_1(pos), tuple2_1(vel), core_real)<0) or (Plus(tuple2_1(pos), tuple2_1(vel), core_real)>99)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)<0)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)>99)))&(internal__!TID_LRE_Beh_t18 -> Update)
+			 	   []
+			 	   (((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)<=const_lre_beh_LRE_Beh_MinSafeDist) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)))&(internal__!TID_LRE_Beh_t14 -> Update)
+			 	   []
+			 	   ((lre_beh_inOPEZ(pos) and (((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist) or (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>const_lre_beh_LRE_Beh_StaticObsDist)))))&(internal__!TID_LRE_Beh_t7 -> Update)
+			 	   []
+			 	   ((((Plus(Mult(tuple2_1(vel), tuple2_1(vel), core_real), Mult(tuple2_2(vel), tuple2_2(vel), core_real), core_real)<=Mult(3, 3, core_nat)) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>10)) and (not ((lre_beh_inOPEZ(pos))))))&(reqMOM__!TID_LRE_Beh_t1.in -> Update)
+			 	   []
+			 	   (((((Plus(tuple2_1(pos), tuple2_1(vel), core_real)<0) or (Plus(tuple2_1(pos), tuple2_1(vel), core_real)>99)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)<0)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)>99)))&(internal__!TID_LRE_Beh_t12 -> Update)
+			 	   []
+			 	   (((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)<=const_lre_beh_LRE_Beh_MinSafeDist) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)))&(internal__!TID_LRE_Beh_t15 -> Update)
+			 	   []
+			 	   (((lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>const_lre_beh_LRE_Beh_StaticObsDist) and (not (lre_beh_inOPEZ(pos)))))&(internal__!TID_LRE_Beh_t10 -> Update)
+			 	   []
+			 	   (((((Plus(Mult(tuple2_1(vel), tuple2_1(vel), core_real), Mult(tuple2_2(vel), tuple2_2(vel), core_real), core_real)>Mult(3, 3, core_nat)) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)) and (lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist)) and (not (lre_beh_inOPEZ(pos)))))&(internal__!TID_LRE_Beh_t4 -> Update)
+			 	   []
+			 	   (((((Plus(tuple2_1(pos), tuple2_1(vel), core_real)<0) or (Plus(tuple2_1(pos), tuple2_1(vel), core_real)>99)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)<0)) or (Plus(tuple2_2(pos), tuple2_2(vel), core_real)>99)))&(internal__!TID_LRE_Beh_t9 -> Update)
+			 	   []
+			 	   ((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist))&(internal__!TID_LRE_Beh_t16 -> Update)
+			 	   []
+			 	   ((lre_beh_inOPEZ(pos) and (((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)>const_lre_beh_LRE_Beh_MinSafeDist) or (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)>const_lre_beh_LRE_Beh_StaticObsDist)))))&(internal__!TID_LRE_Beh_t8 -> Update)
+			 	   []
+			 	   (((lre_beh_CDA(pos,const_lre_beh_LRE_Beh_Obsts,vel)<=const_lre_beh_LRE_Beh_MinSafeDist) and (lre_beh_dist(pos,const_lre_beh_LRE_Beh_Obsts)<=const_lre_beh_LRE_Beh_StaticObsDist)))&(internal__!TID_LRE_Beh_t5 -> Update)
+			 	   	 
+			 	   	 []
+			 	   	 set_vel?x__ -> Update
+			 	   	 []
+			 	   	 
+			 	   	 set_pos?x__ -> Update
+		within
+			Update
+	)
+	MemoryTransitions_opt_0(id__) =
+	(
+		let
+			Update = Current(id__)
+			Current(id__)
+			 	   = 
+			 	   reqVel__!TID_LRE_Beh_t11.in?reqV -> Update
+			 	   []
+			 	   reqOCM__!TID_LRE_Beh_t3.in -> Update
+			 	   []
+			 	   internal__!TID_LRE_Beh_t0 -> Update
+			 	   []
+			 	   reqOCM__!TID_LRE_Beh_t17.in -> Update
+			 	   []
+			 	   endTask__!TID_LRE_Beh_t13.in -> Update
+			 	   []
+			 	   reqOCM__!TID_LRE_Beh_t2.in -> Update
+		within
+			Update
+	)
+	
+	-- Memory cell processes
+	Memory_opt_vel(x__) = ( 
+		get_vel!x__ -> Memory_opt_vel(x__)
+		[]
+		set_vel?x__ -> Memory_opt_vel(x__)
+	)
+	Memory_opt_reqV(x__) = ( 
+		get_reqV!x__ -> Memory_opt_reqV(x__)
+		[]
+		set_reqV?x__ -> Memory_opt_reqV(x__)
+	)
+	Memory_opt_pos(x__) = ( 
+		get_pos!x__ -> Memory_opt_pos(x__)
+		[]
+		set_pos?x__ -> Memory_opt_pos(x__)
+	)
+	
+	-- Composition of memory, StateMachine and Memory transition processes
+	
+	MemorySTM_opt(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) =
+		sbisim(	
+		  dbisim(
+		    sbisim(dbisim(
+		      sbisim(Memory_opt_vel((0,0))
+		          	[| {|set_vel,get_vel|} |] 
+		          	dbisim(
+		          	  sbisim(Memory_opt_pos((0,0))
+		          	      	[| {|get_pos,set_pos|} |] 
+		          	      	sbisim(	
+		          	      	  dbisim(
+		          	      	    sbisim(dbisim(sbisim(Memory_opt_reqV((0,0))
+		          	      	          	[| {|get_reqV,set_reqV|} |] 
+		          	      	          	STM_core(id__,
+		          	      	          			    const_lre_beh_LRE_Beh_StaticObsDist,
+		          	      	          			    const_lre_beh_LRE_Beh_MinSafeDist,
+		          	      	          			    const_lre_beh_LRE_Beh_HCMVel,
+		          	      	          			    const_lre_beh_LRE_Beh_MOMVel,
+		          	      	          			    const_lre_beh_LRE_Beh_Obsts)
+		          	      	          	)\ {|get_reqV,set_reqV|}
+		          	      	          )
+		          	      	      	  [| {|internal__.TID_LRE_Beh_t5,set_pos,internal__.TID_LRE_Beh_t7,internal__.TID_LRE_Beh_t8,internal__.TID_LRE_Beh_t18,internal__.TID_LRE_Beh_t4,reqMOM__.TID_LRE_Beh_t1,set_vel,internal__.TID_LRE_Beh_t16,internal__.TID_LRE_Beh_t14,internal__.TID_LRE_Beh_t15,internal__.TID_LRE_Beh_t12,internal__.TID_LRE_Beh_t9,internal__.TID_LRE_Beh_t10|} |]
+		          	      	      	  MemoryTransitions_opt_1(id__,
+		          	      	      	  	 const_lre_beh_LRE_Beh_MinSafeDist,
+		          	      	      	  	 const_lre_beh_LRE_Beh_StaticObsDist,
+		          	      	      	  	 const_lre_beh_LRE_Beh_Obsts)
+		          	      	      	  )\{|internal__.TID_LRE_Beh_t5,internal__.TID_LRE_Beh_t7,internal__.TID_LRE_Beh_t8,internal__.TID_LRE_Beh_t18,internal__.TID_LRE_Beh_t4,internal__.TID_LRE_Beh_t16,internal__.TID_LRE_Beh_t14,internal__.TID_LRE_Beh_t15,internal__.TID_LRE_Beh_t12,internal__.TID_LRE_Beh_t9,internal__.TID_LRE_Beh_t10|})
+		          	      	      )
+		          	      	) \ {|get_pos,set_pos|}
+		          	      )
+		          	) \ {|set_vel,get_vel|}
+		          )
+		      	  [| {|reqOCM__.TID_LRE_Beh_t2,reqVel__.TID_LRE_Beh_t11,endTask__.TID_LRE_Beh_t13,reqOCM__.TID_LRE_Beh_t3,reqOCM__.TID_LRE_Beh_t17,internal__.TID_LRE_Beh_t0|} |]
+		      	  MemoryTransitions_opt_0(id__)
+		      	  )\{|internal__.TID_LRE_Beh_t0|})
+		      )
+	
+	-- main process
+	
+	MachineMemorySyncSet = Union({
+		union(
+			union(
+				{|get_pos,set_pos,
+				get_vel,set_vel,
+				get_reqV,set_reqV|},
+				{||}
+			)
+				
+			,
+			{|internal__.TID_LRE_Beh_t0,
+			reqMOM__.TID_LRE_Beh_t1,
+			reqOCM__.TID_LRE_Beh_t2,
+			reqOCM__.TID_LRE_Beh_t3,
+			internal__.TID_LRE_Beh_t4,
+			internal__.TID_LRE_Beh_t7,
+			internal__.TID_LRE_Beh_t8,
+			internal__.TID_LRE_Beh_t10,
+			reqVel__.TID_LRE_Beh_t11,
+			endTask__.TID_LRE_Beh_t13,
+			internal__.TID_LRE_Beh_t14,
+			internal__.TID_LRE_Beh_t15,
+			internal__.TID_LRE_Beh_t16,
+			reqOCM__.TID_LRE_Beh_t17,
+			internal__.TID_LRE_Beh_t5,
+			internal__.TID_LRE_Beh_t9,
+			internal__.TID_LRE_Beh_t12,
+			internal__.TID_LRE_Beh_t18|}
+		)
+	})
+	
+	MachineMemoryHidingSet = Union({
+		union(
+			{|get_pos,set_pos,
+			get_vel,set_vel,
+			get_reqV,set_reqV|},
+			{||}
+		)
+	})
+	
+	MachineInternalEvents = {|
+		internal__
+	|}
+	
+	AUX(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = (
+		(
+			STM(id__,
+					    const_lre_beh_LRE_Beh_StaticObsDist,
+					    const_lre_beh_LRE_Beh_MinSafeDist,
+					    const_lre_beh_LRE_Beh_HCMVel,
+					    const_lre_beh_LRE_Beh_MOMVel,
+					    const_lre_beh_LRE_Beh_Obsts)
+				[|MachineMemorySyncSet|]
+			sbisim(diamond(MemoryN(id__, const_lre_beh_LRE_Beh_StaticObsDist, const_lre_beh_LRE_Beh_MinSafeDist, const_lre_beh_LRE_Beh_HCMVel, const_lre_beh_LRE_Beh_MOMVel, const_lre_beh_LRE_Beh_Obsts)))
+		)[[
+			endTask__.x____ <- endTask,
+			reqOCM__.x____ <- reqOCM,
+			reqMOM__.x____ <- reqMOM,
+			reqVel__.x____ <- reqVel,
+			advVel__.x____ <- advVel,
+			position__.x____ <- position
+			| x____ <- TIDS
+		]]
+		\MachineMemoryHidingSet
+	)
+	[|{|terminate|}|>SKIP\MachineInternalEvents
+	
+	
+	STM_core(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = 
+		sbisim(diamond(STM(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)))
+		
+	AUX_opt(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = 
+		(MemorySTM_opt(id__,
+				    const_lre_beh_LRE_Beh_StaticObsDist,
+				    const_lre_beh_LRE_Beh_MinSafeDist,
+				    const_lre_beh_LRE_Beh_HCMVel,
+				    const_lre_beh_LRE_Beh_MOMVel,
+				    const_lre_beh_LRE_Beh_Obsts)
+		)[[
+			endTask__.x____ <- endTask,
+			reqOCM__.x____ <- reqOCM,
+			reqMOM__.x____ <- reqMOM,
+			reqVel__.x____ <- reqVel,
+			advVel__.x____ <- advVel,
+			position__.x____ <- position
+			| x____ <- TIDS
+		]]
+		[|{|terminate|}|>SKIP\MachineInternalEvents
+
+	-- definition of the behaviour of state machines (default, optimised, visible, visible and optimised)
+	transparent diamond
+	transparent sbisim
+	transparent dbisim
+	transparent chase
+			
+	FVS__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = AUX_opt(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts)
+	Dunopt__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = AUX(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) \ internal_events
+	D__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = AUX_opt(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) \ internal_events
+	O__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = sbisim(diamond(D__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts)))
+	VS__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = ShowV(FVS__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts))
+	VS_O__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = sbisim(diamond(VS__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts)))
+	HEXT__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) = O__(id__,
+			    const_lre_beh_LRE_Beh_StaticObsDist,
+			    const_lre_beh_LRE_Beh_MinSafeDist,
+			    const_lre_beh_LRE_Beh_HCMVel,
+			    const_lre_beh_LRE_Beh_MOMVel,
+			    const_lre_beh_LRE_Beh_Obsts) [|shared_variable_events|] SKIP	
+endmodule

@@ -1,0 +1,248 @@
+package Chemical
+enumeration Status {  noGas gasD } import sequence_toolkit::*
+enumeration Angle { Left Right Back Front }
+datatype GasSensor {
+	c : Chem
+	i : Intensity
+}
+type Chem
+type Intensity
+
+//Analyze whether there is gas or not
+function analysis( gs : Seq( GasSensor )) : Status {
+		precondition size ( gs ) > 0
+    postcondition exists x: nat | 0 < x /\ x <= size (gs) /\ gs[x].i>0 @ result == gasD
+	postcondition forall y: nat | 0 < y /\ y <= size (gs) /\ gs[y].i==0 @  result == noGas
+	 
+}
+
+//check if intensity is high enough
+function goreq(  i1 : Intensity , i2 : Intensity) : boolean {
+postcondition result == (i1 > i2)}
+
+//Return the highest intensity
+function intensity( gs : Seq( GasSensor )) : Intensity {
+	precondition size ( gs ) > 0
+	postcondition forall x : nat | 0 < x /\ x <= size ( gs ) @ goreq ( result , gs [ x ] . i )
+	postcondition exists y: nat | 0 < y /\ y <= size (gs) @ result == gs[y].i
+}
+function location( gs : Seq( GasSensor )) : Angle {
+	precondition size ( gs ) > 0
+	postcondition exists x : nat | 0 < x /\ x <= size ( gs ) @ gs [ x ] . i == intensity ( gs ) /\ result == angle ( x )
+}
+function angle( x : nat) : Angle { 
+//precondition 0< x /\ x<=360
+	postcondition if 0< x< 90 then result ==Front else if 90<= x<180 then result ==Right else if 180<= x< 270 then result ==Back	else result==Left end end end }
+
+
+function card(A:Set(?X)): nat {
+}
+
+enumeration Loc { left right front  }
+
+operation changeDirection( l : Loc) {
+	initial i0
+	state From {
+	}
+	final j0
+	transition t1 {
+		from From
+		to j0
+		condition l == Loc::left
+		action move( lv , Angle::Right)
+	}
+	transition t2 {
+		from i0
+		to From
+	}
+	transition t3 {
+		from From
+		to j0
+		condition l == Loc::right
+		action move( lv , Angle::Left)
+	}
+	transition t4 {
+		from From
+		to j0
+		condition l == Loc::front
+		action move( lv , Angle::Back)
+	}
+	requires Operations const lv : real
+}
+
+
+interface LOperations {
+	changeDirection(l : Loc)
+}
+
+interface Operations {
+	move(   lv : real , a : Angle)
+	randomWalk()
+	shortRandomWalk()
+}
+operation shortRandomWalk() {
+	terminates
+}
+operation move( lv : real , a : Angle) {
+	terminates
+}
+
+
+
+
+stm Movement {
+	requires Operations
+	requires LOperations
+	const lv : real , evadeTime : nat , stuckPeriod : nat , stuckDist : real ,
+	outPeriod : nat
+	var a : Angle , d0 : real , d1 : real
+	var l : Loc 
+	event obstacle : Loc
+	event odometer : real
+	event resume
+	
+	event turn : Angle
+	event stop
+	event flag
+	initial i1
+	state Waiting {
+		during randomWalk()
+	}
+	state Going {
+		entry move( lv , a)
+	}
+	state Found {
+		entry move( 0 , Angle::Front) ; send flag
+	}
+	final j1
+	state Avoiding {
+		entry odometer ? d0 ; changeDirection ( l ) ; wait ( evadeTime )
+	}
+	transition t1 {
+		from i1
+		to Waiting
+	}
+	transition t2 {
+		from Waiting
+		to Going
+		trigger turn ? a
+	}
+	transition t3 {
+		from Going
+		to Going
+		trigger turn ? a
+	}
+	transition t4 {
+		from Going
+		to Found
+		trigger stop
+	}
+	transition t5 {
+		from Found
+		to j1
+	}
+	state TryingAgain {
+		entry move( lv , a)
+	}
+	state AvoidingAgain {
+	}
+	state GettingOut {
+		
+	entry shortRandomWalk() ; wait ( outPeriod )
+	}
+	transition t6 {
+		from Going
+		to Avoiding
+		trigger obstacle ? l # T
+	}
+	transition t7 {
+		from Avoiding
+		to TryingAgain
+		trigger turn ? a
+	}
+	transition t8 {
+		from TryingAgain
+		to TryingAgain
+		trigger turn ? a
+	}
+	transition t9 {
+		from TryingAgain
+		to Found
+		trigger stop
+	}
+	transition t10 {
+		from TryingAgain
+		to Waiting
+		trigger resume
+	}
+	transition t11 {
+		from TryingAgain
+		to AvoidingAgain
+		trigger obstacle ? l
+		action 
+	send odometer ? d1
+	}
+	transition t12 {
+		from AvoidingAgain
+		to Avoiding
+		#T
+		condition since ( T ) < stuckPeriod \/ d1 - d0 > stuckDist
+	}
+	transition t13 {
+		from AvoidingAgain
+		to GettingOut
+		condition since ( T ) >= stuckPeriod /\ d1 - d0 <= stuckDist
+	}
+	transition t14 {
+		from GettingOut
+		to Going
+		trigger turn ? a
+	}
+	clock T
+transition t0 {
+		from Waiting
+		to Waiting
+		trigger resume
+	}
+transition t15 {
+		from Waiting
+		to Found
+		trigger stop
+	}
+	transition t16 {
+		from GettingOut
+		to Found
+		trigger stop
+	}
+	transition t17 {
+		from AvoidingAgain
+		to Found
+		trigger stop
+	}
+	transition t18 {
+		from Avoiding
+		to Found
+		trigger stop
+	}
+	transition t19 {
+		from Avoiding
+		to Waiting
+		trigger resume
+	}
+	transition t20 {
+		from GettingOut
+		to Waiting
+		trigger resume
+	}
+	transition t22 {
+		from AvoidingAgain
+		to Waiting
+		trigger resume
+	}
+transition t21 {
+		from Going
+		to Waiting
+		trigger resume
+	}
+}
+

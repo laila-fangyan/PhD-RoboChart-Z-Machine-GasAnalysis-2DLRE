@@ -1,0 +1,21 @@
+include "Location.csp"
+
+
+-- generate Location_OP_changeDirection
+P_Location_OP_changeDirection = let
+	id__ = 0
+	
+	l = Loc_left
+	
+	
+	
+within
+	Location::OP_changeDirection::O__(id__,
+				l,
+			    const_Location_changeDirection_lv)
+assert P_Location_OP_changeDirection :[deadlock-free]	
+assert P_Location_OP_changeDirection;RUN({r__}) :[deadlock-free]
+assert P_Location_OP_changeDirection :[deterministic]
+assert P_Location_OP_changeDirection :[divergence-free]
+
+

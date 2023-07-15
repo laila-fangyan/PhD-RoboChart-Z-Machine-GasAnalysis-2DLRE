@@ -1,0 +1,248 @@
+for (f in RC!Function) {
+if(f.name="location" ){
+var postcond_string: String;
+var precond_string:String;
+
+for(precond in f.preconditions){
+precond_string="precondition \""+precond.binaryExpString()+"\"";
+precond_string.println();
+}
+
+/*
+for(postcond in f.postconditions){
+
+//CASE 1: postcondition=forall, 3 segments
+if(postcond.isTypeOf(Forall)){
+
+//Segment 1: variables
+var quantity_string: String;
+//Metamodel: forall-> quantifierExpression which has 3 attributes: variables, suchthat, predicate
+for(variable in postcond.variables){
+//TO DO
+//here I only consider situation of one variable
+//needs to extend to cover multi variables in quantifier 
+if(variable.type.isTypeOf(TypeRef)){
+quantity_string= "\\<forall> " +variable.name+"::"+ variable.type.ref.name;
+quantity_string.println();
+}
+}
+
+//Segment2: 
+postcond.suchthat.println();
+var suchthat_string: String;
+if(postcond.suchthat.isTypeOf(And)){
+suchthat_string=postcond.suchthat.andString();
+postcond.suchthat.andString().println();}
+else if(postcond.suchthat.isTypeOf(LessThan) or postcond.suchthat.isTypeOf(LessOrEqual) or postcond.suchthat.isTypeOf(Equals) or postcond.suchthat.isTypeOf(GreaterThan)){
+suchthat_string=postcond.suchthat.binaryExpString();
+postcond.suchthat.binaryExpString().println();
+}
+
+
+//Segment 3:
+var predicate_string: String;
+postcond.predicate.println();
+if(postcond.predicate.isTypeOf(CallExp)){
+predicate_string=postcond.predicate.callExpString();
+postcond.predicate.callExpString().println();
+}
+else if(postcond.predicate.isTypeOf(Equals)){
+predicate_string=postcond.predicate.equalsString();
+}else if(postcond.predicate.isTypeOf(And)){
+predicate_string=postcond.predicate.andString();
+postcond.predicate.andString().println();
+}
+
+postcond_string="postcondition "+"\""+quantity_string+". "+suchthat_string+" \\<longrightarrow> "+predicate_string+"\"";
+postcond_string.println();
+}
+
+
+
+//CASE 2: postcondition=exist
+else
+if(postcond.isTypeOf(Exists)){
+//Segment 1: QUANTIFIER
+var quantity_string: String;
+//Metamodel: forall-> quantifierExpression
+for(variable in postcond.variables){
+//TO DO
+//here I only consider situation of one variable
+//needs to extend to cover multi variables in quantifier 
+if(variable.type.isTypeOf(TypeRef)){
+quantity_string= "\\<exists> " +variable.name+"::"+ variable.type.ref.name;
+quantity_string.println();
+}
+}
+
+//Segment2: 
+postcond.suchthat.println();
+var suchthat_string: String;
+if(postcond.suchthat.isTypeOf(And)){
+suchthat_string=postcond.suchthat.andString();
+postcond.suchthat.andString().println();}
+else if(postcond.suchthat.isTypeOf(LessThan) or postcond.suchthat.isTypeOf(LessOrEqual) or postcond.suchthat.isTypeOf(Equals) or postcond.suchthat.isTypeOf(GreaterThan)){
+suchthat_string=postcond.suchthat.binaryExpString();
+postcond.suchthat.binaryExpString().println();
+}
+
+
+//Segment 3:
+var predicate_string: String;
+postcond.predicate.println();
+if(postcond.predicate.isTypeOf(CallExp)){
+predicate_string=postcond.predicate.callExpString();
+postcond.predicate.callExpString().println();
+}
+else if(postcond.predicate.isTypeOf(Equals)){
+predicate_string=postcond.predicate.equalsString();
+}else if(postcond.predicate.isTypeOf(And)){
+//TO DO, need to add more sub-operations to support location function
+predicate_string=postcond.predicate.andString();
+postcond.predicate.andString().println();
+}
+
+postcond_string="postcondition "+"\""+quantity_string+". "+suchthat_string+" \\<longrightarrow> "+predicate_string+"\"";
+"postcond_string:".println();
+postcond_string.println();
+}
+
+//CASE 3: postcondition=ifexpression
+else
+if(postcond.isTypeOf(IfExpression)){
+//TO DO
+}
+
+//CASE 4: postcondition=Equals
+else
+if(postcond.isTypeOf(Equals)){
+postcond_string="postcondition \""+postcond.equalsString()+"\"";
+postcond_string.println();
+}
+
+
+}
+*/
+}
+}
+
+
+operation RC!Expression binaryExpString(): String{
+"self.type".println();
+self.type.println();
+if(self.isTypeOf(LessThan)){
+return self.lessThanString();}
+else if(self.isTypeOf(GreaterThan)){
+return self.greaterThanString();}
+else if(self.isTypeOf(LessOrEqual)){
+return self.lessOrEqualString();}
+else if(self.isTypeOf(Equals)){
+return self.equalsString();}
+else if(self.isTypeOf(IntegerExp) or self.isTypeOf(RefExp) or self.isTypeOf(CallExp)  or self.isTypeOf(ResultExp) or self.isTypeOf(Selection) ){
+return self.oneSideOfBianryString();}
+else if(self.isTypeOf(ParExp)){
+return self.exp.binaryExpString();
+}
+}
+
+
+operation RC!Expression lessThanString(): String{
+return self.left.binaryExpString() +"<" + self.right.binaryExpString();
+}
+
+operation RC!Expression greaterThanString(): String{
+return self.left.binaryExpString() +">" + self.right.binaryExpString();
+}
+
+operation RC!Expression lessOrEqualString(): String{
+return self.left.binaryExpString() +"\\<le>" + self.right.binaryExpString();
+}
+
+operation RC!Expression equalsString(): String{
+return self.left.binaryExpString() +"=" + self.right.binaryExpString();
+}
+
+operation RC!Expression andString(): String{
+return self.left.binaryExpString() +"\\<and>" + self.right.binaryExpString();
+}
+//DONE
+//to return the string of left or right expression string of the binary expression
+//currently covers 3 types: Integer, RefExp, CallExp
+operation RC!Expression oneSideOfBianryString(): String{
+if(self.isTypeOf(IntegerExp)){
+return self.value.toString();
+}
+else if(self.isTypeOf(RefExp)){
+self.ref.name.println();
+return self.ref.name;
+}
+else if(self.isTypeOf(CallExp)){
+self.callExpString().println();
+return self.callExpString();
+}
+else if(self.isTypeOf(ResultExp)){
+return "result";
+}
+else if(self.isTypeOf(Selection)){
+return self.member.name+"("+self.receiver.value.ref.name+"!"+self.receiver.parameters.at(0).ref.name+")";
+}
+}
+
+
+operation RC!CallExp callExpString(): String{
+var args_string: String;
+var callExp_string: String;
+//to get the parameter on the right
+
+if(self.args.at(0).isTypeOf(RefExp)){
+args_string= self.args.at(0).ref.name;
+}
+else 
+//this branch is for callexp used in functions where we have the keyword result
+if(self.args.at(0).isTypeOf(ResultExp)){
+args_string= "result";
+}
+else
+if(self.args.at(0).isTypeOf(Selection)){
+args_string=self.args.at(0).member.name+"("+self.args.at(0).receiver.value.ref.name+"!"+self.args.at(0).receiver.parameters.at(0).ref.name+")";
+}
+
+//for the case that there are more than 2 args, we need insert ',' between args
+var j=1;
+while(j<self.args.size()){
+"self.args.at(j).type:".println();
+self.args.at(j).type.println();
+
+
+if(self.args.at(j).isTypeOf(RefExp)){
+args_string=args_string+ ", "+ self.args.at(j).ref.name;
+}
+else 
+//this branch is for callexp used in functions where we have the keyword result
+if(self.args.at(j).isTypeOf(ResultExp)){
+args_string=args_string+ ", "+ "result";
+}
+else
+if(self.args.at(j).isTypeOf(Selection)){
+self.args.at(j).receiver.println();
+//ArrayExp []
+self.args.at(j).receiver.value.type.println();
+self.args.at(j).receiver.value.ref.name.println();
+//gs
+self.args.at(j).receiver.parameters.at(0).ref.name.println();
+//x
+self.args.at(j).member.name.println();
+//i
+args_string= args_string+ ", "+self.args.at(j).member.name+"("+self.args.at(j).receiver.value.ref.name+"!"+self.args.at(j).receiver.parameters.at(0).ref.name+")";
+//i(gs!x)
+}
+
+//????shall j++ inside or outside?
+j++;
+}
+
+callExp_string=self.`function`.ref.name+"("+args_string+")";
+return callExp_string;
+}
+
+

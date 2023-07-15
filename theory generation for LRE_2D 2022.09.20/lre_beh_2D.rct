@@ -1,0 +1,152 @@
+package lre_beh 
+
+
+interface Ctrl_Ops {
+	CalcCloseObs ( )
+AdvVel (   v : real )
+} 
+
+
+stm LRE_Beh {
+	var pos: real*real
+    var vel : real*real
+	var reqV : real*real
+	requires Ctrl_Ops 
+	
+	const StaticObsDist : real
+    const MinSafeDist : real
+	const HCMVel : real
+    const MOMVel : real
+	const Obsts : Seq(real*real)
+	
+	event endTask
+	event reqOCM
+	event reqMOM
+    event reqVel : real*real
+	event advVel : real*real
+	event position: real*real
+
+	
+	state OCM {
+	}
+	state MOM {
+		entry advVel ! setVel ( vel , MOMVel ) ; 
+		vel = setVel ( vel , MOMVel )
+	}
+	state HCM {
+		entry advVel ! setVel ( vel, HCMVel ) ; vel = setVel ( vel , HCMVel )
+	}
+	state CAM {
+		entry advVel ! maneuv ( vel ) ; vel = maneuv ( vel )
+	}
+	
+	initial i0
+	transition t0 {
+		from i0
+		to OCM
+	}
+	transition t1 {
+		from OCM
+		to MOM
+		trigger 
+		
+		reqMOM
+		condition vel[1] * vel[1] + vel[2] * vel[2] <= 3 * 3 /\ dist ( pos , Obsts ) > 10 /\ not ( inOPEZ ( pos ) )
+	}
+	transition t2 {
+		from MOM
+		to OCM
+		trigger 
+	reqOCM
+	}
+	transition t3 {
+		from HCM
+		to OCM
+		trigger reqOCM
+	}
+	transition t4 {
+		from MOM
+		to HCM
+		condition vel[1] * vel[1] + vel[2] * vel[2]  > 3 * 3 /\ dist ( pos , Obsts ) <= StaticObsDist /\ CDA ( pos , Obsts , vel ) > MinSafeDist /\ not inOPEZ ( pos )
+	}
+	
+transition t7 {
+		from MOM
+		to OCM
+		condition inOPEZ ( pos ) /\ ( CDA ( pos , Obsts , vel ) > MinSafeDist \/ dist ( pos , Obsts ) > StaticObsDist )
+	}
+	transition t8 {
+		from HCM
+		to OCM
+		condition inOPEZ ( pos ) /\ ( CDA ( pos , Obsts , vel ) > MinSafeDist \/ dist ( pos , Obsts ) > StaticObsDist )
+	}
+	transition t10 {
+		from HCM
+		to MOM
+		condition dist ( pos , Obsts ) > StaticObsDist /\ not inOPEZ ( pos )
+	}
+
+	transition t11 {
+		from OCM
+		to OCM
+		trigger 
+		reqVel ? reqV
+		action advVel ! reqV ; vel = reqV
+	}
+	transition t13 {
+		from MOM
+		to OCM
+		trigger 
+		endTask
+		action advVel ! (| 0, 0 |); vel=(| 0, 0 |)
+	}
+	transition t14 {
+		from HCM
+		to CAM
+		condition CDA ( pos , Obsts , vel ) <= MinSafeDist /\ dist ( pos , Obsts ) <= StaticObsDist
+	}
+	transition t15 {
+		from MOM
+		to CAM
+		condition CDA ( pos , Obsts , vel ) <= MinSafeDist /\ dist ( pos , Obsts ) <= StaticObsDist
+	}
+	transition t16 {
+		from CAM
+		to OCM
+		condition CDA ( pos , Obsts , vel ) > MinSafeDist
+		action advVel ! (|0, 0|);vel=(| 0, 0 |)
+	}
+	transition t17 {
+		from CAM
+		to OCM
+		trigger reqOCM
+	}
+
+transition t5 {
+		from CAM
+		to CAM
+		condition CDA ( pos , Obsts , vel ) <= MinSafeDist /\ dist ( pos , Obsts ) <= StaticObsDist
+	}
+	transition t9 {
+		from MOM
+		to CAM
+		condition pos[1] +  vel[1] < 0 \/ pos[1]  + vel[1] > 99 \/ pos[2] + vel[2] < 0 \/ pos[2] + vel[2] > 99
+	}
+transition t12 {
+		from HCM
+		to CAM
+		condition pos[1] +  vel[1] < 0 \/ pos[1]  + vel[1] > 99 \/ pos[2] + vel[2] < 0 \/ pos[2] + vel[2] > 99
+	}
+	transition t18 {
+		from CAM
+		to CAM
+		condition pos[1] +  vel[1] < 0 \/ pos[1]  + vel[1]  > 99 \/ pos[2] + vel[2]< 0 \/ pos[2] + vel[2]> 99
+	}
+}
+
+function dist ( p : real *real, obs: Seq(real *real) ) : real { }
+function inOPEZ (p:real *real): boolean{}
+function CDA(p: real *real, obs: Seq(real *real), v: real *real) : real {}
+ 
+function maneuv ( v : real *real ) : real *real { } 
+function setVel (v : real *real , setpoint : real ) : real *real { }

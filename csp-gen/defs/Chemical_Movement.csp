@@ -1,0 +1,2357 @@
+module Chemical_Movement
+exports
+	-- flow channels
+	channel internal__ : TIDS
+	channel enteredV, enterV, exitV, exitedV : SIDS
+	channel enter, entered: SIDS.SIDS
+	channel exit,exited: SIDS.SIDS
+	channel terminate
+	
+	-- variable channels
+	channel get_a, set_a: Chemical_Angle
+	channel get_d0, set_d0: core_real
+	channel get_d1, set_d1: core_real
+	channel get_l, set_l: Loc
+			
+	-- shared variable channels
+	
+	-- local variable channels for defined operations that are required by the state machine
+	
+	-- declaring state machine events
+	channel obstacle__: TIDS.InOut.Loc
+	channel obstacle: InOut.Loc
+	channel odometer__: TIDS.InOut.core_real
+	channel odometer: InOut.core_real
+	channel resume__: TIDS.InOut
+	channel resume: InOut
+	channel turn__: TIDS.InOut.Chemical_Angle
+	channel turn: InOut.Chemical_Angle
+	channel stop__: TIDS.InOut
+	channel stop: InOut
+	channel flag__: TIDS.InOut
+	channel flag: InOut
+	
+	-- declaring call and ret events for undefined operations
+	channel randomWalkCall
+	channel shortRandomWalkCall
+	channel changeDirectionCall: Loc
+	channel moveCall: core_real.Chemical_Angle
+	
+	-- Only the undefined operations are declared here.
+	-- If the state machine is in isolation, all required operations will be undefined.
+	-- If it is in the context of a controller, the required operations not provided by the
+	-- controller will be declared here, and the defined operations will be defined in the
+	-- context of the Controller module, and therefore within scope of the state machien module.
+	CALL__randomWalk(id__) =  randomWalkCall -> SKIP
+	
+	CALL__shortRandomWalk(id__) =  shortRandomWalkCall -> SKIP
+	
+	CALL__changeDirection(id__,
+			    l) =  changeDirectionCall.l -> SKIP
+	
+	CALL__move(id__,
+			    lv,
+			    a) =  moveCall.lv.a -> SKIP
+	
+	
+	
+	-- definition of functions used to expose flow channels
+	ShowEvents(P,E) = P[[ entered.x____.y____ <- enteredV.y____ | entered.x____.y____ <- E]]
+					   [[ enter.x____.y____ <- enterV.y____ | enter.x____.y____ <- E]]
+					   [[ exit.x____.y____ <- exitV.y____ | exit.x____.y____ <- E]]
+					   [[ exited.x____.y____ <- exitedV.y____ | exited.x____.y____ <- E ]]
+						 
+	ShowEnteredV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowEnterV(P) = P[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitV(P) = P[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitedV(P) = P[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+				[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	
+	-- declaring identifiers of state and final states
+	datatype SIDS = SID_Movement
+	              | SID_Movement_Waiting
+	              | SID_Movement_Going
+	              | SID_Movement_Found
+	              | SID_Movement_j1
+	              | SID_Movement_Avoiding
+	              | SID_Movement_TryingAgain
+	              | SID_Movement_AvoidingAgain
+	              | SID_Movement_GettingOut
+	
+	-- declaring identifiers of transitions
+	datatype TIDS = NULLTRANSITION__
+	              | TID_Movement_t1
+	              | TID_Movement_t2
+	              | TID_Movement_t3
+	              | TID_Movement_t4
+	              | TID_Movement_t5
+	              | TID_Movement_t6
+	              | TID_Movement_t7
+	              | TID_Movement_t8
+	              | TID_Movement_t9
+	              | TID_Movement_t10
+	              | TID_Movement_t11
+	              | TID_Movement_t12
+	              | TID_Movement_t13
+	              | TID_Movement_t14
+	              | TID_Movement_t0
+	              | TID_Movement_t15
+	              | TID_Movement_t16
+	              | TID_Movement_t17
+	              | TID_Movement_t18
+	              | TID_Movement_t19
+	              | TID_Movement_t20
+	              | TID_Movement_t22
+	              | TID_Movement_t21
+	
+	-- declaring identifiers of transitions that can interupt a state (excludes transitions from junctions)
+	
+	ITIDS = {
+		TID_Movement_t2,	TID_Movement_t3,	TID_Movement_t4,	TID_Movement_t5,	TID_Movement_t6,	TID_Movement_t7,	TID_Movement_t8,	TID_Movement_t9,	TID_Movement_t10,	TID_Movement_t11,	TID_Movement_t12,	TID_Movement_t13,	TID_Movement_t14,	TID_Movement_t0,	TID_Movement_t15,	TID_Movement_t16,	TID_Movement_t17,	TID_Movement_t18,	TID_Movement_t19,	TID_Movement_t20,	TID_Movement_t22,	TID_Movement_t21
+	}
+	
+	int_int = {|
+		obstacle__.TID_Movement_t2,
+		odometer__.TID_Movement_t2,
+		resume__.TID_Movement_t2,
+		turn__.TID_Movement_t2,
+		stop__.TID_Movement_t2,
+		flag__.TID_Movement_t2,
+		internal__.TID_Movement_t2,
+		obstacle__.TID_Movement_t3,
+		odometer__.TID_Movement_t3,
+		resume__.TID_Movement_t3,
+		turn__.TID_Movement_t3,
+		stop__.TID_Movement_t3,
+		flag__.TID_Movement_t3,
+		internal__.TID_Movement_t3,
+		obstacle__.TID_Movement_t4,
+		odometer__.TID_Movement_t4,
+		resume__.TID_Movement_t4,
+		turn__.TID_Movement_t4,
+		stop__.TID_Movement_t4,
+		flag__.TID_Movement_t4,
+		internal__.TID_Movement_t4,
+		obstacle__.TID_Movement_t5,
+		odometer__.TID_Movement_t5,
+		resume__.TID_Movement_t5,
+		turn__.TID_Movement_t5,
+		stop__.TID_Movement_t5,
+		flag__.TID_Movement_t5,
+		internal__.TID_Movement_t5,
+		obstacle__.TID_Movement_t6,
+		odometer__.TID_Movement_t6,
+		resume__.TID_Movement_t6,
+		turn__.TID_Movement_t6,
+		stop__.TID_Movement_t6,
+		flag__.TID_Movement_t6,
+		internal__.TID_Movement_t6,
+		obstacle__.TID_Movement_t7,
+		odometer__.TID_Movement_t7,
+		resume__.TID_Movement_t7,
+		turn__.TID_Movement_t7,
+		stop__.TID_Movement_t7,
+		flag__.TID_Movement_t7,
+		internal__.TID_Movement_t7,
+		obstacle__.TID_Movement_t8,
+		odometer__.TID_Movement_t8,
+		resume__.TID_Movement_t8,
+		turn__.TID_Movement_t8,
+		stop__.TID_Movement_t8,
+		flag__.TID_Movement_t8,
+		internal__.TID_Movement_t8,
+		obstacle__.TID_Movement_t9,
+		odometer__.TID_Movement_t9,
+		resume__.TID_Movement_t9,
+		turn__.TID_Movement_t9,
+		stop__.TID_Movement_t9,
+		flag__.TID_Movement_t9,
+		internal__.TID_Movement_t9,
+		obstacle__.TID_Movement_t10,
+		odometer__.TID_Movement_t10,
+		resume__.TID_Movement_t10,
+		turn__.TID_Movement_t10,
+		stop__.TID_Movement_t10,
+		flag__.TID_Movement_t10,
+		internal__.TID_Movement_t10,
+		obstacle__.TID_Movement_t11,
+		odometer__.TID_Movement_t11,
+		resume__.TID_Movement_t11,
+		turn__.TID_Movement_t11,
+		stop__.TID_Movement_t11,
+		flag__.TID_Movement_t11,
+		internal__.TID_Movement_t11,
+		obstacle__.TID_Movement_t12,
+		odometer__.TID_Movement_t12,
+		resume__.TID_Movement_t12,
+		turn__.TID_Movement_t12,
+		stop__.TID_Movement_t12,
+		flag__.TID_Movement_t12,
+		internal__.TID_Movement_t12,
+		obstacle__.TID_Movement_t13,
+		odometer__.TID_Movement_t13,
+		resume__.TID_Movement_t13,
+		turn__.TID_Movement_t13,
+		stop__.TID_Movement_t13,
+		flag__.TID_Movement_t13,
+		internal__.TID_Movement_t13,
+		obstacle__.TID_Movement_t14,
+		odometer__.TID_Movement_t14,
+		resume__.TID_Movement_t14,
+		turn__.TID_Movement_t14,
+		stop__.TID_Movement_t14,
+		flag__.TID_Movement_t14,
+		internal__.TID_Movement_t14,
+		obstacle__.TID_Movement_t0,
+		odometer__.TID_Movement_t0,
+		resume__.TID_Movement_t0,
+		turn__.TID_Movement_t0,
+		stop__.TID_Movement_t0,
+		flag__.TID_Movement_t0,
+		internal__.TID_Movement_t0,
+		obstacle__.TID_Movement_t15,
+		odometer__.TID_Movement_t15,
+		resume__.TID_Movement_t15,
+		turn__.TID_Movement_t15,
+		stop__.TID_Movement_t15,
+		flag__.TID_Movement_t15,
+		internal__.TID_Movement_t15,
+		obstacle__.TID_Movement_t16,
+		odometer__.TID_Movement_t16,
+		resume__.TID_Movement_t16,
+		turn__.TID_Movement_t16,
+		stop__.TID_Movement_t16,
+		flag__.TID_Movement_t16,
+		internal__.TID_Movement_t16,
+		obstacle__.TID_Movement_t17,
+		odometer__.TID_Movement_t17,
+		resume__.TID_Movement_t17,
+		turn__.TID_Movement_t17,
+		stop__.TID_Movement_t17,
+		flag__.TID_Movement_t17,
+		internal__.TID_Movement_t17,
+		obstacle__.TID_Movement_t18,
+		odometer__.TID_Movement_t18,
+		resume__.TID_Movement_t18,
+		turn__.TID_Movement_t18,
+		stop__.TID_Movement_t18,
+		flag__.TID_Movement_t18,
+		internal__.TID_Movement_t18,
+		obstacle__.TID_Movement_t19,
+		odometer__.TID_Movement_t19,
+		resume__.TID_Movement_t19,
+		turn__.TID_Movement_t19,
+		stop__.TID_Movement_t19,
+		flag__.TID_Movement_t19,
+		internal__.TID_Movement_t19,
+		obstacle__.TID_Movement_t20,
+		odometer__.TID_Movement_t20,
+		resume__.TID_Movement_t20,
+		turn__.TID_Movement_t20,
+		stop__.TID_Movement_t20,
+		flag__.TID_Movement_t20,
+		internal__.TID_Movement_t20,
+		obstacle__.TID_Movement_t22,
+		odometer__.TID_Movement_t22,
+		resume__.TID_Movement_t22,
+		turn__.TID_Movement_t22,
+		stop__.TID_Movement_t22,
+		flag__.TID_Movement_t22,
+		internal__.TID_Movement_t22,
+		obstacle__.TID_Movement_t21,
+		odometer__.TID_Movement_t21,
+		resume__.TID_Movement_t21,
+		turn__.TID_Movement_t21,
+		stop__.TID_Movement_t21,
+		flag__.TID_Movement_t21,
+		internal__.TID_Movement_t21
+	|}
+		
+	
+	internal_events = {|enter,entered,exit,exited|}
+	shared_variable_events = {|
+	|}
+			
+	
+	-- declaring all states
+	CS_Movement_Waiting_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_Waiting}
+	|}
+	
+	
+	Movement_Waiting_triggers = {|
+		turn__.TID_Movement_t3,
+		stop__.TID_Movement_t4,
+		turn__.TID_Movement_t2,
+		obstacle__.TID_Movement_t6,
+		resume__.TID_Movement_t10,
+		stop__.TID_Movement_t15,
+		resume__.TID_Movement_t22,
+		resume__.TID_Movement_t19,
+		stop__.TID_Movement_t16,
+		internal__.TID_Movement_t12,
+		turn__.TID_Movement_t14,
+		resume__.TID_Movement_t20,
+		stop__.TID_Movement_t9,
+		obstacle__.TID_Movement_t11,
+		internal__.TID_Movement_t5,
+		internal__.TID_Movement_t13,
+		turn__.TID_Movement_t7,
+		turn__.TID_Movement_t8,
+		stop__.TID_Movement_t17,
+		resume__.TID_Movement_t0,
+		resume__.TID_Movement_t21,
+		stop__.TID_Movement_t18
+	|}
+	
+	State_Movement_Waiting(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t2(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = turn__!TID_Movement_t2.in?a -> set_a!a ->  (exit.SID_Movement_Waiting.SID_Movement_Waiting -> SKIP;
+							SKIP;exited.SID_Movement_Waiting.SID_Movement_Waiting -> SKIP;
+							enter!SID_Movement_Waiting!SID_Movement_Going -> entered!SID_Movement_Waiting!SID_Movement_Going ->
+							State_Movement_Waiting(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t0(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = resume__!TID_Movement_t0.in ->  (exit.SID_Movement_Waiting.SID_Movement_Waiting -> SKIP;
+							SKIP;exited.SID_Movement_Waiting.SID_Movement_Waiting -> SKIP;
+							enter!SID_Movement_Waiting!SID_Movement_Waiting -> State_Movement_Waiting_execute(id__,SID_Movement_Waiting)
+		)
+		T_Movement_t15(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = stop__!TID_Movement_t15.in ->  (exit.SID_Movement_Waiting.SID_Movement_Waiting -> SKIP;
+							SKIP;exited.SID_Movement_Waiting.SID_Movement_Waiting -> SKIP;
+							enter!SID_Movement_Waiting!SID_Movement_Found -> entered!SID_Movement_Waiting!SID_Movement_Found ->
+							State_Movement_Waiting(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		State_Movement_Waiting_execute(id__,o____) = SKIP; 
+			entered!o____!SID_Movement_Waiting ->
+			(true&CALL__randomWalk(
+						id__
+					); STOP /\ (
+				T_Movement_t2(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t0(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t15(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t2,TID_Movement_t6,TID_Movement_t10,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18}) -> exit?y____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (
+						SKIP;
+						exited!y____!SID_Movement_Waiting -> SKIP);
+						State_Movement_Waiting(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] obstacle__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t2,TID_Movement_t6,TID_Movement_t10,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (
+						SKIP;
+						exited!y____!SID_Movement_Waiting -> SKIP);
+						State_Movement_Waiting(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] odometer__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t2,TID_Movement_t6,TID_Movement_t10,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (
+						SKIP;
+						exited!y____!SID_Movement_Waiting -> SKIP);
+						State_Movement_Waiting(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t2,TID_Movement_t6,TID_Movement_t10,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (
+						SKIP;
+						exited!y____!SID_Movement_Waiting -> SKIP);
+						State_Movement_Waiting(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t2,TID_Movement_t6,TID_Movement_t10,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (
+						SKIP;
+						exited!y____!SID_Movement_Waiting -> SKIP);
+						State_Movement_Waiting(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t2,TID_Movement_t6,TID_Movement_t10,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (
+						SKIP;
+						exited!y____!SID_Movement_Waiting -> SKIP);
+						State_Movement_Waiting(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] flag__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t2,TID_Movement_t6,TID_Movement_t10,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (
+						SKIP;
+						exited!y____!SID_Movement_Waiting -> SKIP);
+						State_Movement_Waiting(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_Movement_Waiting})!SID_Movement_Waiting -> (State_Movement_Waiting_execute(id__,x____))
+	
+	CS_Movement_Going_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_Going}
+	|}
+	
+	
+	Movement_Going_triggers = {|
+		turn__.TID_Movement_t3,
+		stop__.TID_Movement_t4,
+		obstacle__.TID_Movement_t6,
+		resume__.TID_Movement_t10,
+		turn__.TID_Movement_t2,
+		stop__.TID_Movement_t15,
+		resume__.TID_Movement_t22,
+		resume__.TID_Movement_t19,
+		stop__.TID_Movement_t16,
+		internal__.TID_Movement_t12,
+		turn__.TID_Movement_t14,
+		resume__.TID_Movement_t20,
+		stop__.TID_Movement_t9,
+		obstacle__.TID_Movement_t11,
+		internal__.TID_Movement_t5,
+		internal__.TID_Movement_t13,
+		turn__.TID_Movement_t7,
+		turn__.TID_Movement_t8,
+		stop__.TID_Movement_t17,
+		resume__.TID_Movement_t0,
+		resume__.TID_Movement_t21,
+		stop__.TID_Movement_t18
+	|}
+	
+	State_Movement_Going(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t3(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = turn__!TID_Movement_t3.in?a -> set_a!a ->  (exit.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							SKIP;exited.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							enter!SID_Movement_Going!SID_Movement_Going -> State_Movement_Going_execute(id__,SID_Movement_Going)
+		)
+		T_Movement_t4(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = stop__!TID_Movement_t4.in ->  (exit.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							SKIP;exited.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							enter!SID_Movement_Going!SID_Movement_Found -> entered!SID_Movement_Going!SID_Movement_Found ->
+							State_Movement_Going(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t6(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = obstacle__!TID_Movement_t6.in?l -> set_l!l ->  (exit.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							SKIP;exited.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							enter!SID_Movement_Going!SID_Movement_Avoiding -> entered!SID_Movement_Going!SID_Movement_Avoiding ->
+							State_Movement_Going(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t21(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = resume__!TID_Movement_t21.in ->  (exit.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							SKIP;exited.SID_Movement_Going.SID_Movement_Going -> SKIP;
+							enter!SID_Movement_Going!SID_Movement_Waiting -> entered!SID_Movement_Going!SID_Movement_Waiting ->
+							State_Movement_Going(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		State_Movement_Going_execute(id__,o____) = get_a?a -> true&CALL__move(
+					id__,
+					const_Chemical_Movement_lv,
+					a
+				); 
+			entered!o____!SID_Movement_Going ->
+			(SKIP; STOP /\ (
+				T_Movement_t3(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t4(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t6(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t21(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18}) -> exit?y____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (
+						SKIP;
+						exited!y____!SID_Movement_Going -> SKIP);
+						State_Movement_Going(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] obstacle__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (
+						SKIP;
+						exited!y____!SID_Movement_Going -> SKIP);
+						State_Movement_Going(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] odometer__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (
+						SKIP;
+						exited!y____!SID_Movement_Going -> SKIP);
+						State_Movement_Going(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (
+						SKIP;
+						exited!y____!SID_Movement_Going -> SKIP);
+						State_Movement_Going(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (
+						SKIP;
+						exited!y____!SID_Movement_Going -> SKIP);
+						State_Movement_Going(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (
+						SKIP;
+						exited!y____!SID_Movement_Going -> SKIP);
+						State_Movement_Going(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] flag__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (
+						SKIP;
+						exited!y____!SID_Movement_Going -> SKIP);
+						State_Movement_Going(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_Movement_Going})!SID_Movement_Going -> (State_Movement_Going_execute(id__,x____))
+	
+	CS_Movement_Found_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_Found}
+	|}
+	
+	
+	Movement_Found_triggers = {|
+		internal__.TID_Movement_t5
+	|}
+	
+	State_Movement_Found(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t5(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = internal__!TID_Movement_t5 ->  exit.SID_Movement_Found.SID_Movement_Found -> SKIP;
+							SKIP;exited.SID_Movement_Found.SID_Movement_Found -> SKIP;
+							enter!SID_Movement_Found!SID_Movement_j1 -> entered!SID_Movement_Found!SID_Movement_j1 ->
+							State_Movement_Found(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		State_Movement_Found_execute(id__,o____) = true&CALL__move(
+					id__,
+					0,
+					Chemical_Angle_Front
+				);true&(flag.out -> SKIP); 
+			entered!o____!SID_Movement_Found ->
+			(SKIP; STOP /\ (
+				T_Movement_t5(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t5}) -> exit?y____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (
+						SKIP;
+						exited!y____!SID_Movement_Found -> SKIP);
+						State_Movement_Found(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] obstacle__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t5})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (
+						SKIP;
+						exited!y____!SID_Movement_Found -> SKIP);
+						State_Movement_Found(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] odometer__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t5})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (
+						SKIP;
+						exited!y____!SID_Movement_Found -> SKIP);
+						State_Movement_Found(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t5})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (
+						SKIP;
+						exited!y____!SID_Movement_Found -> SKIP);
+						State_Movement_Found(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t5})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (
+						SKIP;
+						exited!y____!SID_Movement_Found -> SKIP);
+						State_Movement_Found(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t5})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (
+						SKIP;
+						exited!y____!SID_Movement_Found -> SKIP);
+						State_Movement_Found(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] flag__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t5})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (
+						SKIP;
+						exited!y____!SID_Movement_Found -> SKIP);
+						State_Movement_Found(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_Movement_Found})!SID_Movement_Found -> (State_Movement_Found_execute(id__,x____))
+	
+	CS_Movement_j1_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_j1}
+	|}
+	
+	
+	Movement_j1_triggers = {|
+	|}
+	
+	State_Movement_j1(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		State_Movement_j1_execute(id__,o____) = SKIP; 
+			entered!o____!SID_Movement_j1 ->
+			terminate -> SKIP
+	within
+		enter?x____:diff(SIDS,{SID_Movement_j1})!SID_Movement_j1 -> (State_Movement_j1_execute(id__,x____))
+	
+	CS_Movement_Avoiding_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_Avoiding}
+	|}
+	
+	
+	Movement_Avoiding_triggers = {|
+		turn__.TID_Movement_t3,
+		stop__.TID_Movement_t4,
+		resume__.TID_Movement_t10,
+		turn__.TID_Movement_t2,
+		obstacle__.TID_Movement_t6,
+		stop__.TID_Movement_t15,
+		resume__.TID_Movement_t22,
+		resume__.TID_Movement_t19,
+		stop__.TID_Movement_t16,
+		internal__.TID_Movement_t12,
+		turn__.TID_Movement_t14,
+		resume__.TID_Movement_t20,
+		stop__.TID_Movement_t9,
+		obstacle__.TID_Movement_t11,
+		internal__.TID_Movement_t5,
+		internal__.TID_Movement_t13,
+		turn__.TID_Movement_t7,
+		turn__.TID_Movement_t8,
+		stop__.TID_Movement_t17,
+		resume__.TID_Movement_t0,
+		resume__.TID_Movement_t21,
+		stop__.TID_Movement_t18
+	|}
+	
+	State_Movement_Avoiding(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t7(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = turn__!TID_Movement_t7.in?a -> set_a!a ->  (exit.SID_Movement_Avoiding.SID_Movement_Avoiding -> SKIP;
+							SKIP;exited.SID_Movement_Avoiding.SID_Movement_Avoiding -> SKIP;
+							enter!SID_Movement_Avoiding!SID_Movement_TryingAgain -> entered!SID_Movement_Avoiding!SID_Movement_TryingAgain ->
+							State_Movement_Avoiding(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t18(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = stop__!TID_Movement_t18.in ->  (exit.SID_Movement_Avoiding.SID_Movement_Avoiding -> SKIP;
+							SKIP;exited.SID_Movement_Avoiding.SID_Movement_Avoiding -> SKIP;
+							enter!SID_Movement_Avoiding!SID_Movement_Found -> entered!SID_Movement_Avoiding!SID_Movement_Found ->
+							State_Movement_Avoiding(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t19(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = resume__!TID_Movement_t19.in ->  (exit.SID_Movement_Avoiding.SID_Movement_Avoiding -> SKIP;
+							SKIP;exited.SID_Movement_Avoiding.SID_Movement_Avoiding -> SKIP;
+							enter!SID_Movement_Avoiding!SID_Movement_Waiting -> entered!SID_Movement_Avoiding!SID_Movement_Waiting ->
+							State_Movement_Avoiding(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		State_Movement_Avoiding_execute(id__,o____) = true&(odometer.in?d0 -> set_d0!d0 -> SKIP);get_l?l -> true&CALL__changeDirection(
+					id__,
+					l
+				);SKIP; 
+			entered!o____!SID_Movement_Avoiding ->
+			(SKIP; STOP /\ (
+				T_Movement_t7(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t18(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t19(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18}) -> exit?y____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (
+						SKIP;
+						exited!y____!SID_Movement_Avoiding -> SKIP);
+						State_Movement_Avoiding(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] obstacle__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (
+						SKIP;
+						exited!y____!SID_Movement_Avoiding -> SKIP);
+						State_Movement_Avoiding(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] odometer__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (
+						SKIP;
+						exited!y____!SID_Movement_Avoiding -> SKIP);
+						State_Movement_Avoiding(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (
+						SKIP;
+						exited!y____!SID_Movement_Avoiding -> SKIP);
+						State_Movement_Avoiding(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (
+						SKIP;
+						exited!y____!SID_Movement_Avoiding -> SKIP);
+						State_Movement_Avoiding(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (
+						SKIP;
+						exited!y____!SID_Movement_Avoiding -> SKIP);
+						State_Movement_Avoiding(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] flag__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (
+						SKIP;
+						exited!y____!SID_Movement_Avoiding -> SKIP);
+						State_Movement_Avoiding(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_Movement_Avoiding})!SID_Movement_Avoiding -> (State_Movement_Avoiding_execute(id__,x____))
+	
+	CS_Movement_TryingAgain_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_TryingAgain}
+	|}
+	
+	
+	Movement_TryingAgain_triggers = {|
+		turn__.TID_Movement_t3,
+		stop__.TID_Movement_t4,
+		resume__.TID_Movement_t10,
+		turn__.TID_Movement_t2,
+		obstacle__.TID_Movement_t6,
+		stop__.TID_Movement_t15,
+		resume__.TID_Movement_t22,
+		resume__.TID_Movement_t19,
+		stop__.TID_Movement_t16,
+		internal__.TID_Movement_t12,
+		turn__.TID_Movement_t14,
+		resume__.TID_Movement_t20,
+		stop__.TID_Movement_t9,
+		obstacle__.TID_Movement_t11,
+		internal__.TID_Movement_t5,
+		internal__.TID_Movement_t13,
+		turn__.TID_Movement_t8,
+		turn__.TID_Movement_t7,
+		stop__.TID_Movement_t17,
+		resume__.TID_Movement_t0,
+		resume__.TID_Movement_t21,
+		stop__.TID_Movement_t18
+	|}
+	
+	State_Movement_TryingAgain(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t8(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = turn__!TID_Movement_t8.in?a -> set_a!a ->  (exit.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							SKIP;exited.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							enter!SID_Movement_TryingAgain!SID_Movement_TryingAgain -> State_Movement_TryingAgain_execute(id__,SID_Movement_TryingAgain)
+		)
+		T_Movement_t9(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = stop__!TID_Movement_t9.in ->  (exit.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							SKIP;exited.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							enter!SID_Movement_TryingAgain!SID_Movement_Found -> entered!SID_Movement_TryingAgain!SID_Movement_Found ->
+							State_Movement_TryingAgain(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t10(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = resume__!TID_Movement_t10.in ->  (exit.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							SKIP;exited.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							enter!SID_Movement_TryingAgain!SID_Movement_Waiting -> entered!SID_Movement_TryingAgain!SID_Movement_Waiting ->
+							State_Movement_TryingAgain(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t11(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = obstacle__!TID_Movement_t11.in?l -> set_l!l ->  (exit.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							SKIP;exited.SID_Movement_TryingAgain.SID_Movement_TryingAgain -> SKIP;
+							true&(odometer.in?d1 -> set_d1!d1 -> SKIP);enter!SID_Movement_TryingAgain!SID_Movement_AvoidingAgain -> entered!SID_Movement_TryingAgain!SID_Movement_AvoidingAgain ->
+							State_Movement_TryingAgain(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		State_Movement_TryingAgain_execute(id__,o____) = get_a?a -> true&CALL__move(
+					id__,
+					const_Chemical_Movement_lv,
+					a
+				); 
+			entered!o____!SID_Movement_TryingAgain ->
+			(SKIP; STOP /\ (
+				T_Movement_t8(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t9(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t10(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t11(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t8,TID_Movement_t7,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18}) -> exit?y____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_TryingAgain -> SKIP);
+						State_Movement_TryingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] obstacle__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t8,TID_Movement_t7,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_TryingAgain -> SKIP);
+						State_Movement_TryingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] odometer__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t8,TID_Movement_t7,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_TryingAgain -> SKIP);
+						State_Movement_TryingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t8,TID_Movement_t7,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_TryingAgain -> SKIP);
+						State_Movement_TryingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t8,TID_Movement_t7,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_TryingAgain -> SKIP);
+						State_Movement_TryingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t8,TID_Movement_t7,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_TryingAgain -> SKIP);
+						State_Movement_TryingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] flag__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t8,TID_Movement_t7,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_TryingAgain -> SKIP);
+						State_Movement_TryingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_Movement_TryingAgain})!SID_Movement_TryingAgain -> (State_Movement_TryingAgain_execute(id__,x____))
+	
+	CS_Movement_AvoidingAgain_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_AvoidingAgain}
+	|}
+	
+	
+	Movement_AvoidingAgain_triggers = {|
+		turn__.TID_Movement_t3,
+		stop__.TID_Movement_t4,
+		resume__.TID_Movement_t10,
+		turn__.TID_Movement_t2,
+		obstacle__.TID_Movement_t6,
+		stop__.TID_Movement_t15,
+		resume__.TID_Movement_t22,
+		resume__.TID_Movement_t19,
+		stop__.TID_Movement_t16,
+		internal__.TID_Movement_t12,
+		turn__.TID_Movement_t14,
+		resume__.TID_Movement_t20,
+		stop__.TID_Movement_t9,
+		obstacle__.TID_Movement_t11,
+		internal__.TID_Movement_t5,
+		internal__.TID_Movement_t13,
+		stop__.TID_Movement_t17,
+		turn__.TID_Movement_t7,
+		turn__.TID_Movement_t8,
+		resume__.TID_Movement_t0,
+		resume__.TID_Movement_t21,
+		stop__.TID_Movement_t18
+	|}
+	
+	State_Movement_AvoidingAgain(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t12(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = internal__!TID_Movement_t12 ->  exit.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							SKIP;exited.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							enter!SID_Movement_AvoidingAgain!SID_Movement_Avoiding -> entered!SID_Movement_AvoidingAgain!SID_Movement_Avoiding ->
+							State_Movement_AvoidingAgain(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		T_Movement_t13(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = internal__!TID_Movement_t13 ->  exit.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							SKIP;exited.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							enter!SID_Movement_AvoidingAgain!SID_Movement_GettingOut -> entered!SID_Movement_AvoidingAgain!SID_Movement_GettingOut ->
+							State_Movement_AvoidingAgain(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		T_Movement_t17(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = stop__!TID_Movement_t17.in ->  (exit.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							SKIP;exited.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							enter!SID_Movement_AvoidingAgain!SID_Movement_Found -> entered!SID_Movement_AvoidingAgain!SID_Movement_Found ->
+							State_Movement_AvoidingAgain(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t22(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = resume__!TID_Movement_t22.in ->  (exit.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							SKIP;exited.SID_Movement_AvoidingAgain.SID_Movement_AvoidingAgain -> SKIP;
+							enter!SID_Movement_AvoidingAgain!SID_Movement_Waiting -> entered!SID_Movement_AvoidingAgain!SID_Movement_Waiting ->
+							State_Movement_AvoidingAgain(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		State_Movement_AvoidingAgain_execute(id__,o____) = SKIP; 
+			entered!o____!SID_Movement_AvoidingAgain ->
+			(SKIP; STOP /\ (
+				T_Movement_t12(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t13(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t17(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t22(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t17,TID_Movement_t7,TID_Movement_t8,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18}) -> exit?y____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_AvoidingAgain -> SKIP);
+						State_Movement_AvoidingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] obstacle__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t17,TID_Movement_t7,TID_Movement_t8,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_AvoidingAgain -> SKIP);
+						State_Movement_AvoidingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] odometer__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t17,TID_Movement_t7,TID_Movement_t8,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_AvoidingAgain -> SKIP);
+						State_Movement_AvoidingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t17,TID_Movement_t7,TID_Movement_t8,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_AvoidingAgain -> SKIP);
+						State_Movement_AvoidingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t17,TID_Movement_t7,TID_Movement_t8,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_AvoidingAgain -> SKIP);
+						State_Movement_AvoidingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t17,TID_Movement_t7,TID_Movement_t8,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_AvoidingAgain -> SKIP);
+						State_Movement_AvoidingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] flag__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t10,TID_Movement_t2,TID_Movement_t6,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t12,TID_Movement_t14,TID_Movement_t20,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t17,TID_Movement_t7,TID_Movement_t8,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (
+						SKIP;
+						exited!y____!SID_Movement_AvoidingAgain -> SKIP);
+						State_Movement_AvoidingAgain(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_Movement_AvoidingAgain})!SID_Movement_AvoidingAgain -> (State_Movement_AvoidingAgain_execute(id__,x____))
+	
+	CS_Movement_GettingOut_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut},
+		y____ <- {SID_Movement_GettingOut}
+	|}
+	
+	
+	Movement_GettingOut_triggers = {|
+		turn__.TID_Movement_t3,
+		stop__.TID_Movement_t4,
+		obstacle__.TID_Movement_t6,
+		resume__.TID_Movement_t10,
+		turn__.TID_Movement_t2,
+		stop__.TID_Movement_t15,
+		resume__.TID_Movement_t22,
+		resume__.TID_Movement_t19,
+		stop__.TID_Movement_t16,
+		turn__.TID_Movement_t14,
+		resume__.TID_Movement_t20,
+		internal__.TID_Movement_t12,
+		stop__.TID_Movement_t9,
+		obstacle__.TID_Movement_t11,
+		internal__.TID_Movement_t5,
+		internal__.TID_Movement_t13,
+		turn__.TID_Movement_t7,
+		turn__.TID_Movement_t8,
+		stop__.TID_Movement_t17,
+		resume__.TID_Movement_t0,
+		resume__.TID_Movement_t21,
+		stop__.TID_Movement_t18
+	|}
+	
+	State_Movement_GettingOut(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t14(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = turn__!TID_Movement_t14.in?a -> set_a!a ->  (exit.SID_Movement_GettingOut.SID_Movement_GettingOut -> SKIP;
+							SKIP;exited.SID_Movement_GettingOut.SID_Movement_GettingOut -> SKIP;
+							enter!SID_Movement_GettingOut!SID_Movement_Going -> entered!SID_Movement_GettingOut!SID_Movement_Going ->
+							State_Movement_GettingOut(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t16(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = stop__!TID_Movement_t16.in ->  (exit.SID_Movement_GettingOut.SID_Movement_GettingOut -> SKIP;
+							SKIP;exited.SID_Movement_GettingOut.SID_Movement_GettingOut -> SKIP;
+							enter!SID_Movement_GettingOut!SID_Movement_Found -> entered!SID_Movement_GettingOut!SID_Movement_Found ->
+							State_Movement_GettingOut(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		T_Movement_t20(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = resume__!TID_Movement_t20.in ->  (exit.SID_Movement_GettingOut.SID_Movement_GettingOut -> SKIP;
+							SKIP;exited.SID_Movement_GettingOut.SID_Movement_GettingOut -> SKIP;
+							enter!SID_Movement_GettingOut!SID_Movement_Waiting -> entered!SID_Movement_GettingOut!SID_Movement_Waiting ->
+							State_Movement_GettingOut(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+		)
+		State_Movement_GettingOut_execute(id__,o____) = true&CALL__shortRandomWalk(
+					id__
+				);SKIP; 
+			entered!o____!SID_Movement_GettingOut ->
+			(SKIP; STOP /\ (
+				T_Movement_t14(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t16(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)[]
+				T_Movement_t20(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t14,TID_Movement_t20,TID_Movement_t12,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18}) -> exit?y____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (
+						SKIP;
+						exited!y____!SID_Movement_GettingOut -> SKIP);
+						State_Movement_GettingOut(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] obstacle__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t14,TID_Movement_t20,TID_Movement_t12,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (
+						SKIP;
+						exited!y____!SID_Movement_GettingOut -> SKIP);
+						State_Movement_GettingOut(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] odometer__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t14,TID_Movement_t20,TID_Movement_t12,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (
+						SKIP;
+						exited!y____!SID_Movement_GettingOut -> SKIP);
+						State_Movement_GettingOut(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t14,TID_Movement_t20,TID_Movement_t12,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (
+						SKIP;
+						exited!y____!SID_Movement_GettingOut -> SKIP);
+						State_Movement_GettingOut(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t14,TID_Movement_t20,TID_Movement_t12,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (
+						SKIP;
+						exited!y____!SID_Movement_GettingOut -> SKIP);
+						State_Movement_GettingOut(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t14,TID_Movement_t20,TID_Movement_t12,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (
+						SKIP;
+						exited!y____!SID_Movement_GettingOut -> SKIP);
+						State_Movement_GettingOut(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+				[] flag__?x____:diff(ITIDS,{NULLTRANSITION__,TID_Movement_t3,TID_Movement_t4,TID_Movement_t6,TID_Movement_t10,TID_Movement_t2,TID_Movement_t15,TID_Movement_t22,TID_Movement_t19,TID_Movement_t16,TID_Movement_t14,TID_Movement_t20,TID_Movement_t12,TID_Movement_t9,TID_Movement_t11,TID_Movement_t5,TID_Movement_t13,TID_Movement_t7,TID_Movement_t8,TID_Movement_t17,TID_Movement_t0,TID_Movement_t21,TID_Movement_t18})?d____ ->	exit?y____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (
+						SKIP;
+						exited!y____!SID_Movement_GettingOut -> SKIP);
+						State_Movement_GettingOut(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_Movement_GettingOut})!SID_Movement_GettingOut -> (State_Movement_GettingOut_execute(id__,x____))
+	
+	
+	I_Movement_i1(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = let
+		T_Movement_t1(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod) = internal__!TID_Movement_t1 -> enter!SID_Movement!SID_Movement_Waiting -> entered!SID_Movement!SID_Movement_Waiting ->
+		SKIP
+	within
+		T_Movement_t1(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+	
+	
+	State_Movement_Waiting_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_Waiting(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_Waiting_triggers)|]
+		SKIP
+			 		
+	State_Movement_Going_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_Going(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_Going_triggers)|]
+		SKIP
+			 		
+	State_Movement_Found_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_Found(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_Found_triggers)|]
+		SKIP
+			 		
+	State_Movement_j1_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_j1(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_j1_triggers)|]
+		SKIP
+			 		
+	State_Movement_Avoiding_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_Avoiding(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_Avoiding_triggers)|]
+		SKIP
+			 		
+	State_Movement_TryingAgain_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_TryingAgain(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_TryingAgain_triggers)|]
+		SKIP
+			 		
+	State_Movement_AvoidingAgain_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_AvoidingAgain(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_AvoidingAgain_triggers)|]
+		SKIP
+			 		
+	State_Movement_GettingOut_R(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		State_Movement_GettingOut(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|diff(int_int,Movement_GettingOut_triggers)|]
+		SKIP
+			 		
+		
+	STM(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = (
+		I_Movement_i1(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+			[|
+				{|enter.x____.y____, entered.x____.y____, exit.x____.y____, exited.x____.y____ |
+					x____ <- diff(SIDS,{SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut}),
+					y____ <- {SID_Movement_Waiting,SID_Movement_Going,SID_Movement_Found,SID_Movement_j1,SID_Movement_Avoiding,SID_Movement_TryingAgain,SID_Movement_AvoidingAgain,SID_Movement_GettingOut}
+			|}|]
+		(
+			State_Movement_Waiting_R(id__,
+					    const_Chemical_Movement_lv,
+					    const_Chemical_Movement_evadeTime,
+					    const_Chemical_Movement_stuckPeriod,
+					    const_Chemical_Movement_stuckDist,
+					    const_Chemical_Movement_outPeriod)
+				[|inter(CS_Movement_Waiting_sync,union(union(union(union(union(union(CS_Movement_Going_sync,CS_Movement_Found_sync),CS_Movement_j1_sync),CS_Movement_Avoiding_sync),CS_Movement_TryingAgain_sync),CS_Movement_AvoidingAgain_sync),CS_Movement_GettingOut_sync))|]
+			(
+				State_Movement_Going_R(id__,
+						    const_Chemical_Movement_lv,
+						    const_Chemical_Movement_evadeTime,
+						    const_Chemical_Movement_stuckPeriod,
+						    const_Chemical_Movement_stuckDist,
+						    const_Chemical_Movement_outPeriod)
+					[|inter(CS_Movement_Going_sync,union(union(union(union(union(CS_Movement_Found_sync,CS_Movement_j1_sync),CS_Movement_Avoiding_sync),CS_Movement_TryingAgain_sync),CS_Movement_AvoidingAgain_sync),CS_Movement_GettingOut_sync))|]
+				(
+					State_Movement_Found_R(id__,
+							    const_Chemical_Movement_lv,
+							    const_Chemical_Movement_evadeTime,
+							    const_Chemical_Movement_stuckPeriod,
+							    const_Chemical_Movement_stuckDist,
+							    const_Chemical_Movement_outPeriod)
+						[|inter(CS_Movement_Found_sync,union(union(union(union(CS_Movement_j1_sync,CS_Movement_Avoiding_sync),CS_Movement_TryingAgain_sync),CS_Movement_AvoidingAgain_sync),CS_Movement_GettingOut_sync))|]
+					(
+						State_Movement_j1_R(id__,
+								    const_Chemical_Movement_lv,
+								    const_Chemical_Movement_evadeTime,
+								    const_Chemical_Movement_stuckPeriod,
+								    const_Chemical_Movement_stuckDist,
+								    const_Chemical_Movement_outPeriod)
+							[|inter(CS_Movement_j1_sync,union(union(union(CS_Movement_Avoiding_sync,CS_Movement_TryingAgain_sync),CS_Movement_AvoidingAgain_sync),CS_Movement_GettingOut_sync))|]
+						(
+							State_Movement_Avoiding_R(id__,
+									    const_Chemical_Movement_lv,
+									    const_Chemical_Movement_evadeTime,
+									    const_Chemical_Movement_stuckPeriod,
+									    const_Chemical_Movement_stuckDist,
+									    const_Chemical_Movement_outPeriod)
+								[|inter(CS_Movement_Avoiding_sync,union(union(CS_Movement_TryingAgain_sync,CS_Movement_AvoidingAgain_sync),CS_Movement_GettingOut_sync))|]
+							(
+								State_Movement_TryingAgain_R(id__,
+										    const_Chemical_Movement_lv,
+										    const_Chemical_Movement_evadeTime,
+										    const_Chemical_Movement_stuckPeriod,
+										    const_Chemical_Movement_stuckDist,
+										    const_Chemical_Movement_outPeriod)
+									[|inter(CS_Movement_TryingAgain_sync,union(CS_Movement_AvoidingAgain_sync,CS_Movement_GettingOut_sync))|]
+								(
+									State_Movement_AvoidingAgain_R(id__,
+											    const_Chemical_Movement_lv,
+											    const_Chemical_Movement_evadeTime,
+											    const_Chemical_Movement_stuckPeriod,
+											    const_Chemical_Movement_stuckDist,
+											    const_Chemical_Movement_outPeriod)
+										[|inter(CS_Movement_AvoidingAgain_sync,CS_Movement_GettingOut_sync)|]
+									State_Movement_GettingOut_R(id__,
+											    const_Chemical_Movement_lv,
+											    const_Chemical_Movement_evadeTime,
+											    const_Chemical_Movement_stuckPeriod,
+											    const_Chemical_Movement_stuckDist,
+											    const_Chemical_Movement_outPeriod)
+								)
+							)
+						)
+					)
+				)
+			)
+		)
+	)
+	
+	-- optimized memory process
+	channel getV_a: Chemical_Angle
+	channel getV_d0: core_real
+	channel getV_d1: core_real
+	channel getV_l: Loc
+	
+	-- individual memory processes
+	Memory_a(a) = (
+		get_a!a -> Memory_a(a)
+		[]
+		getV_a!a -> Memory_a(a)
+		[]
+		set_a?x__ -> Memory_a(x__)
+		[]
+		turn__!TID_Movement_t2.in?a -> Memory_a(a)
+		[]
+		turn__!TID_Movement_t3.in?a -> Memory_a(a)
+		[]
+		turn__!TID_Movement_t7.in?a -> Memory_a(a)
+		[]
+		turn__!TID_Movement_t8.in?a -> Memory_a(a)
+		[]
+		turn__!TID_Movement_t14.in?a -> Memory_a(a)
+	)
+	Memory_d0(d0) = (
+		get_d0!d0 -> Memory_d0(d0)
+		[]
+		getV_d0!d0 -> Memory_d0(d0)
+		[]
+		set_d0?x__ -> Memory_d0(x__)
+	)
+	Memory_d1(d1) = (
+		get_d1!d1 -> Memory_d1(d1)
+		[]
+		getV_d1!d1 -> Memory_d1(d1)
+		[]
+		set_d1?x__ -> Memory_d1(x__)
+	)
+	Memory_l(l) = (
+		get_l!l -> Memory_l(l)
+		[]
+		getV_l!l -> Memory_l(l)
+		[]
+		set_l?x__ -> Memory_l(x__)
+		[]
+		obstacle__!TID_Movement_t6.in?l -> Memory_l(l)
+		[]
+		obstacle__!TID_Movement_t11.in?l -> Memory_l(l)
+	)
+	
+	-- processes that read variables and offer transitions
+	MemoryTransitions(id__, a
+				, d0
+				, d1
+				, l
+				,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 		
+	(internal__!TID_Movement_t1 -> SKIP
+	[]
+	turn__!TID_Movement_t2.in?a -> SKIP
+	[]
+	turn__!TID_Movement_t3.in?a -> SKIP
+	[]
+	stop__!TID_Movement_t4.in -> SKIP
+	[]
+	internal__!TID_Movement_t5 -> SKIP
+	[]
+	obstacle__!TID_Movement_t6.in?l -> SKIP
+	[]
+	turn__!TID_Movement_t7.in?a -> SKIP
+	[]
+	turn__!TID_Movement_t8.in?a -> SKIP
+	[]
+	stop__!TID_Movement_t9.in -> SKIP
+	[]
+	resume__!TID_Movement_t10.in -> SKIP
+	[]
+	obstacle__!TID_Movement_t11.in?l -> SKIP
+	[]
+	(true)&(internal__!TID_Movement_t12 -> SKIP)
+	[]
+	(true)&(internal__!TID_Movement_t13 -> SKIP)
+	[]
+	turn__!TID_Movement_t14.in?a -> SKIP
+	[]
+	resume__!TID_Movement_t0.in -> SKIP
+	[]
+	stop__!TID_Movement_t15.in -> SKIP
+	[]
+	stop__!TID_Movement_t16.in -> SKIP
+	[]
+	stop__!TID_Movement_t17.in -> SKIP
+	[]
+	stop__!TID_Movement_t18.in -> SKIP
+	[]
+	resume__!TID_Movement_t19.in -> SKIP
+	[]
+	resume__!TID_Movement_t20.in -> SKIP
+	[]
+	resume__!TID_Movement_t22.in -> SKIP
+	[]
+	resume__!TID_Movement_t21.in -> SKIP[]
+	set_a?x__ -> SKIP[]
+	set_d0?x__ -> SKIP[]
+	set_d1?x__ -> SKIP[]
+	set_l?x__ -> SKIP)
+	
+	MemoryTransitions_Movement(id__, const_Chemical_Movement_lv, const_Chemical_Movement_evadeTime, const_Chemical_Movement_stuckPeriod, const_Chemical_Movement_stuckDist, const_Chemical_Movement_outPeriod) = (getV_a?a ->
+	getV_d0?d0 ->
+	getV_d1?d1 ->
+	getV_l?l ->
+	MemoryTransitions(id__, a
+				, d0
+				, d1
+				, l
+				,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod); MemoryTransitions_Movement(id__, const_Chemical_Movement_lv, const_Chemical_Movement_evadeTime, const_Chemical_Movement_stuckPeriod, const_Chemical_Movement_stuckDist, const_Chemical_Movement_outPeriod))			
+	
+	-- synchronisation, hiding and process sets 
+	MemoryVariablesProcesses_Movement = Union(
+		{
+			{
+				(Memory_a(Chemical_Angle_Left),{|set_a,get_a,turn__.TID_Movement_t3,turn__.TID_Movement_t2,turn__.TID_Movement_t7,turn__.TID_Movement_t8,getV_a,turn__.TID_Movement_t14|}),
+				(Memory_d0(0),{|set_d0,get_d0,getV_d0|}),
+				(Memory_d1(0),{|set_d1,getV_d1,get_d1|}),
+				(Memory_l(Loc_left),{|getV_l,get_l,obstacle__.TID_Movement_t6,obstacle__.TID_Movement_t11,set_l|})
+			}
+		}
+	)
+	
+	MemoryVariablesSyncSet = Union({
+		{|
+			set_a,
+			turn__.TID_Movement_t3,
+			getV_l,
+			turn__.TID_Movement_t2,
+			set_d1,
+			getV_a,
+			getV_d1,
+			set_d0,
+			set_l,
+			turn__.TID_Movement_t14,
+			getV_d0,
+			turn__.TID_Movement_t7,
+			turn__.TID_Movement_t8,
+			obstacle__.TID_Movement_t6,
+			obstacle__.TID_Movement_t11
+		|}	
+	})
+	
+	MemoryVariablesHideSet = Union({
+		{|
+			getV_l,
+			getV_a,
+			getV_d1,
+			getV_d0
+		|}
+	})
+	
+	-- combined individual memory processes
+	MemoryVariables = ||| (P, alpha) : MemoryVariablesProcesses_Movement @ P
+	
+	-- complete memory process	
+	MemoryN(id__, const_Chemical_Movement_lv, const_Chemical_Movement_evadeTime, const_Chemical_Movement_stuckPeriod, const_Chemical_Movement_stuckDist, const_Chemical_Movement_outPeriod) = sbisim(diamond((sbisim(diamond(MemoryVariables)) [| MemoryVariablesSyncSet |] sbisim(diamond(MemoryTransitions_Movement(id__, const_Chemical_Movement_lv, const_Chemical_Movement_evadeTime, const_Chemical_Movement_stuckPeriod, const_Chemical_Movement_stuckDist, const_Chemical_Movement_outPeriod)))) \ MemoryVariablesHideSet))
+	
+	-- optimised memory
+	-- Sets of named elements identified according to transition conditions:
+	-- {}
+	-- {d1,d0,stuckDist,stuckPeriod}
+	-- Summary of all identified named elements:
+	-- {
+	-- l
+	-- a
+	-- d0
+	-- d1
+	-- stuckDist
+	-- stuckPeriod
+	-- }
+	
+	-- Allocation plan:
+	-- 0:{}
+	--	=> {
+	--		TID_Movement_t1,
+	--		TID_Movement_t3,
+	--		TID_Movement_t4,
+	--		TID_Movement_t2,
+	--		TID_Movement_t6,
+	--		TID_Movement_t10,
+	--		TID_Movement_t15,
+	--		TID_Movement_t22,
+	--		TID_Movement_t19,
+	--		TID_Movement_t16,
+	--		TID_Movement_t14,
+	--		TID_Movement_t20,
+	--		TID_Movement_t9,
+	--		TID_Movement_t11,
+	--		TID_Movement_t5,
+	--		TID_Movement_t7,
+	--		TID_Movement_t8,
+	--		TID_Movement_t17,
+	--		TID_Movement_t0,
+	--		TID_Movement_t21,
+	--		TID_Movement_t18}
+	-- 1:{d1,d0,stuckDist,stuckPeriod}
+	--	=> {
+	--		TID_Movement_t12,
+	--		TID_Movement_t13}
+	
+	-- Memory transition processes
+	MemoryTransitions_opt_0(id__) =
+	(
+		let
+			Update = Current(id__)
+			Current(id__)
+			 	   = 
+			 	   internal__!TID_Movement_t1 -> Update
+			 	   []
+			 	   turn__!TID_Movement_t3.in?a -> Update
+			 	   []
+			 	   stop__!TID_Movement_t4.in -> Update
+			 	   []
+			 	   turn__!TID_Movement_t2.in?a -> Update
+			 	   []
+			 	   obstacle__!TID_Movement_t6.in?l -> Update
+			 	   []
+			 	   resume__!TID_Movement_t10.in -> Update
+			 	   []
+			 	   stop__!TID_Movement_t15.in -> Update
+			 	   []
+			 	   resume__!TID_Movement_t22.in -> Update
+			 	   []
+			 	   resume__!TID_Movement_t19.in -> Update
+			 	   []
+			 	   stop__!TID_Movement_t16.in -> Update
+			 	   []
+			 	   turn__!TID_Movement_t14.in?a -> Update
+			 	   []
+			 	   resume__!TID_Movement_t20.in -> Update
+			 	   []
+			 	   stop__!TID_Movement_t9.in -> Update
+			 	   []
+			 	   obstacle__!TID_Movement_t11.in?l -> Update
+			 	   []
+			 	   internal__!TID_Movement_t5 -> Update
+			 	   []
+			 	   turn__!TID_Movement_t7.in?a -> Update
+			 	   []
+			 	   turn__!TID_Movement_t8.in?a -> Update
+			 	   []
+			 	   stop__!TID_Movement_t17.in -> Update
+			 	   []
+			 	   resume__!TID_Movement_t0.in -> Update
+			 	   []
+			 	   resume__!TID_Movement_t21.in -> Update
+			 	   []
+			 	   stop__!TID_Movement_t18.in -> Update
+		within
+			Update
+	)
+	MemoryTransitions_opt_1(id__,
+		 const_Chemical_Movement_stuckDist,
+		 const_Chemical_Movement_stuckPeriod) =
+	(
+		let
+			Update = 
+			get_d1?d1 ->
+			get_d0?d0 ->
+			Current(id__,
+				 d1,
+				 d0)
+			Current(id__,
+				 d1,
+				 d0)
+			 	   = 
+			 	   (true)&(internal__!TID_Movement_t12 -> Update)
+			 	   []
+			 	   (true)&(internal__!TID_Movement_t13 -> Update)
+			 	   	 
+			 	   	 []
+			 	   	 set_d1?x__ -> Update
+			 	   	 []
+			 	   	 
+			 	   	 set_d0?x__ -> Update
+		within
+			Update
+	)
+	
+	-- Memory cell processes
+	Memory_opt_l(x__) = ( 
+		get_l!x__ -> Memory_opt_l(x__)
+		[]
+		set_l?x__ -> Memory_opt_l(x__)
+	)
+	Memory_opt_a(x__) = ( 
+		get_a!x__ -> Memory_opt_a(x__)
+		[]
+		set_a?x__ -> Memory_opt_a(x__)
+	)
+	Memory_opt_d0(x__) = ( 
+		get_d0!x__ -> Memory_opt_d0(x__)
+		[]
+		set_d0?x__ -> Memory_opt_d0(x__)
+	)
+	Memory_opt_d1(x__) = ( 
+		get_d1!x__ -> Memory_opt_d1(x__)
+		[]
+		set_d1?x__ -> Memory_opt_d1(x__)
+	)
+	
+	-- Composition of memory, StateMachine and Memory transition processes
+	
+	MemorySTM_opt(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) =
+		dbisim(
+		  sbisim(Memory_opt_d1(0)
+		      	[| {|set_d1,get_d1|} |] 
+		      	dbisim(
+		      	  sbisim(Memory_opt_d0(0)
+		      	      	[| {|set_d0,get_d0|} |] 
+		      	      	sbisim(	
+		      	      	  dbisim(
+		      	      	    sbisim(sbisim(	
+		      	      	      dbisim(
+		      	      	        sbisim(dbisim(sbisim(Memory_opt_l(Loc_left)
+		      	      	              	[| {|get_l,set_l|} |] 
+		      	      	              	dbisim(sbisim(Memory_opt_a(Chemical_Angle_Left)
+		      	      	              	      	[| {|set_a,get_a|} |] 
+		      	      	              	      	STM_core(id__,
+		      	      	              	      			    const_Chemical_Movement_lv,
+		      	      	              	      			    const_Chemical_Movement_evadeTime,
+		      	      	              	      			    const_Chemical_Movement_stuckPeriod,
+		      	      	              	      			    const_Chemical_Movement_stuckDist,
+		      	      	              	      			    const_Chemical_Movement_outPeriod)
+		      	      	              	      	)\ {|set_a,get_a|}
+		      	      	              	      )
+		      	      	              	)\ {|get_l,set_l|}
+		      	      	              )
+		      	      	          	  [| {|stop__.TID_Movement_t18,stop__.TID_Movement_t17,stop__.TID_Movement_t16,stop__.TID_Movement_t9,stop__.TID_Movement_t15,turn__.TID_Movement_t3,turn__.TID_Movement_t2,internal__.TID_Movement_t1,turn__.TID_Movement_t14,stop__.TID_Movement_t4,resume__.TID_Movement_t10,resume__.TID_Movement_t21,resume__.TID_Movement_t22,resume__.TID_Movement_t20,internal__.TID_Movement_t5,turn__.TID_Movement_t7,turn__.TID_Movement_t8,obstacle__.TID_Movement_t6,obstacle__.TID_Movement_t11,resume__.TID_Movement_t0,resume__.TID_Movement_t19|} |]
+		      	      	          	  MemoryTransitions_opt_0(id__)
+		      	      	          	  )\{|internal__.TID_Movement_t5,internal__.TID_Movement_t1|})
+		      	      	          )
+		      	      	      	  [| {|internal__.TID_Movement_t12,internal__.TID_Movement_t13,set_d1,set_d0|} |]
+		      	      	      	  MemoryTransitions_opt_1(id__,
+		      	      	      	  	 const_Chemical_Movement_stuckDist,
+		      	      	      	  	 const_Chemical_Movement_stuckPeriod)
+		      	      	      	  )\{|internal__.TID_Movement_t12,internal__.TID_Movement_t13|})
+		      	      	      )
+		      	      	) \ {|set_d0,get_d0|}
+		      	      )
+		      	) \ {|set_d1,get_d1|}
+		      )
+	
+	-- main process
+	
+	MachineMemorySyncSet = Union({
+		union(
+			union(
+				{|get_a,set_a,
+				get_d0,set_d0,
+				get_d1,set_d1,
+				get_l,set_l|},
+				{||}
+			)
+				
+			,
+			{|internal__.TID_Movement_t1,
+			turn__.TID_Movement_t2,
+			turn__.TID_Movement_t3,
+			stop__.TID_Movement_t4,
+			internal__.TID_Movement_t5,
+			obstacle__.TID_Movement_t6,
+			turn__.TID_Movement_t7,
+			turn__.TID_Movement_t8,
+			stop__.TID_Movement_t9,
+			resume__.TID_Movement_t10,
+			obstacle__.TID_Movement_t11,
+			internal__.TID_Movement_t12,
+			internal__.TID_Movement_t13,
+			turn__.TID_Movement_t14,
+			resume__.TID_Movement_t0,
+			stop__.TID_Movement_t15,
+			stop__.TID_Movement_t16,
+			stop__.TID_Movement_t17,
+			stop__.TID_Movement_t18,
+			resume__.TID_Movement_t19,
+			resume__.TID_Movement_t20,
+			resume__.TID_Movement_t22,
+			resume__.TID_Movement_t21|}
+		)
+	})
+	
+	MachineMemoryHidingSet = Union({
+		union(
+			{|get_a,set_a,
+			get_d0,set_d0,
+			get_d1,set_d1,
+			get_l,set_l|},
+			{||}
+		)
+	})
+	
+	MachineInternalEvents = {|
+		internal__
+	|}
+	
+	AUX(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = (
+		(
+			STM(id__,
+					    const_Chemical_Movement_lv,
+					    const_Chemical_Movement_evadeTime,
+					    const_Chemical_Movement_stuckPeriod,
+					    const_Chemical_Movement_stuckDist,
+					    const_Chemical_Movement_outPeriod)
+				[|MachineMemorySyncSet|]
+			sbisim(diamond(MemoryN(id__, const_Chemical_Movement_lv, const_Chemical_Movement_evadeTime, const_Chemical_Movement_stuckPeriod, const_Chemical_Movement_stuckDist, const_Chemical_Movement_outPeriod)))
+		)[[
+			obstacle__.x____ <- obstacle,
+			odometer__.x____ <- odometer,
+			resume__.x____ <- resume,
+			turn__.x____ <- turn,
+			stop__.x____ <- stop,
+			flag__.x____ <- flag
+			| x____ <- TIDS
+		]]
+		\MachineMemoryHidingSet
+	)
+	[|{|terminate|}|>SKIP\MachineInternalEvents
+	
+	
+	STM_core(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		sbisim(diamond(STM(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)))
+		
+	AUX_opt(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = 
+		(MemorySTM_opt(id__,
+				    const_Chemical_Movement_lv,
+				    const_Chemical_Movement_evadeTime,
+				    const_Chemical_Movement_stuckPeriod,
+				    const_Chemical_Movement_stuckDist,
+				    const_Chemical_Movement_outPeriod)
+		)[[
+			obstacle__.x____ <- obstacle,
+			odometer__.x____ <- odometer,
+			resume__.x____ <- resume,
+			turn__.x____ <- turn,
+			stop__.x____ <- stop,
+			flag__.x____ <- flag
+			| x____ <- TIDS
+		]]
+		[|{|terminate|}|>SKIP\MachineInternalEvents
+
+	-- definition of the behaviour of state machines (default, optimised, visible, visible and optimised)
+	transparent diamond
+	transparent sbisim
+	transparent dbisim
+	transparent chase
+			
+	FVS__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = AUX_opt(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod)
+	Dunopt__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = AUX(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) \ internal_events
+	D__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = AUX_opt(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) \ internal_events
+	O__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = sbisim(diamond(D__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod)))
+	VS__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = ShowV(FVS__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod))
+	VS_O__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = sbisim(diamond(VS__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod)))
+	HEXT__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) = O__(id__,
+			    const_Chemical_Movement_lv,
+			    const_Chemical_Movement_evadeTime,
+			    const_Chemical_Movement_stuckPeriod,
+			    const_Chemical_Movement_stuckDist,
+			    const_Chemical_Movement_outPeriod) [|shared_variable_events|] SKIP	
+endmodule

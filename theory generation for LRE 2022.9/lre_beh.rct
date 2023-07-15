@@ -1,0 +1,172 @@
+package lre_beh 
+
+
+interface Ctrl_Ops {
+	CalcCloseObs ( )
+AdvVel (   v : real )
+} 
+
+
+datatype Obstacle { ns_rel_dist : real ew_rel_dist : real depth : real id : nat  obs_hdng : SVec } 
+enumeration Turn { Reverse Port90 NoTurn Starboard90 Starboard180 } 
+
+datatype Advice {   adv_turn : Turn   adv_hdng : SVec } 
+record Close { horiz_cda : real vert_cda : real id : nat } 
+interface Actuators {
+} 
+
+record SVec { radial : real polar : real azimuth : real }
+
+function odist ( o : Obstacle ) : real { }
+function hdist ( o : Obstacle ) : real { } 
+function vdist ( o : Obstacle ) : real { } 
+
+stm LRE_Beh {
+
+	
+	requires Ctrl_Ops 
+	
+	var cobs : Close
+	var inOPEZ : boolean
+	var hvel : real
+	var vvel : real
+    var vel : real
+    var cstc : Obstacle
+	var cdyn : Obstacle
+    var x : real
+	var CDA : real
+	var TCPA : real
+	var depth : real
+	var obs : nat -> Obstacle
+	var hdng : SVec
+	
+	const AvoidanceMargin : real
+	const LREHorizon : real
+	const LRETemporalHorizon : real
+	const ODA_AUV : real
+	const ODA_Obs : real
+	const StaticObsHorizDist : real
+	const StaticObsVertDist : real
+	const StaticObsDfltVertDist : real
+    const MinSafeDist : real
+	
+	event endTask
+	event reqOCM
+	event reqMOM
+	event reqHCM
+    event reqVel : real
+	event reqHdng : real
+	
+	event advVel : real
+	event advHdng : real
+	event manoeuvre
+	
+	state OCM {
+	}
+	state MOM {
+		entry advVel ! 1
+	}
+	state HCM {
+		entry advVel ! 0.1
+	}
+	state CAM {
+	entry manoeuvre
+	}
+	initial i0
+	
+	transition t0 {
+		from i0
+		to OCM
+	}
+	transition t1 {
+		from OCM
+		to MOM
+		trigger reqMOM
+		condition vel <= 0.1 /\ odist ( cdyn ) > 7.5 /\ odist ( cstc ) > 0.3 /\ not ( inOPEZ )
+	}
+	transition t2 {
+		from MOM
+		to OCM
+		trigger reqOCM
+	}
+	transition t3 {
+		from HCM
+		to OCM
+		trigger reqOCM
+	}
+	transition t4 {
+		from MOM
+		to HCM
+		condition hvel >= 0.1 /\ hdist ( cstc ) <= StaticObsHorizDist
+	}
+	transition t6 {
+		from MOM
+		to HCM
+		trigger reqHCM
+	}
+transition t7 {
+		from MOM
+		to OCM
+		condition inOPEZ
+	}
+	transition t8 {
+		from HCM
+		to OCM
+		condition inOPEZ
+	}
+transition t9 {
+		from MOM
+		to HCM
+		condition vvel >= 0.1 /\ vdist ( cstc ) <= StaticObsVertDist
+	}
+	transition t5 {
+		from MOM
+		to HCM
+		condition vdist ( cstc ) <= StaticObsDfltVertDist
+	}
+	transition t10 {
+		from HCM
+		to MOM
+		condition hdist ( cstc ) > StaticObsHorizDist /\ vdist ( cstc ) > StaticObsVertDist
+	}
+
+	transition t11 {
+		from OCM
+		to OCM
+		trigger reqVel ? x
+		action advVel ! x
+	}
+	transition t12 {
+		from OCM
+		to OCM
+		trigger reqHdng ? x
+		action advHdng ! x
+	}
+	transition t13 {
+		from MOM
+		to OCM
+		trigger endTask
+		action advVel ! 0
+	}
+	transition t14 {
+		from HCM
+		to CAM
+		condition CDA < MinSafeDist /\ TCPA >= 0
+	}
+	transition t15 {
+		from MOM
+		to CAM
+		condition CDA < MinSafeDist /\ TCPA >= 0
+	}
+	transition t16 {
+		from CAM
+		to OCM
+		condition CDA >= MinSafeDist
+	}
+	transition t17 {
+		from CAM
+		to OCM
+		trigger reqOCM
+	}
+}
+

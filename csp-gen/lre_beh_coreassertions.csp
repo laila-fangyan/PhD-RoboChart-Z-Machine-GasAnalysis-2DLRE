@@ -1,0 +1,24 @@
+include "lre_beh.csp"
+
+-- generate lre_beh_LRE_Beh
+P_lre_beh_LRE_Beh = let
+	id__ = 0
+	
+	
+	
+within
+	lre_beh::LRE_Beh::O__(
+		id__,
+		const_lre_beh_LRE_Beh_StaticObsDist,
+		const_lre_beh_LRE_Beh_MinSafeDist,
+		const_lre_beh_LRE_Beh_HCMVel,
+		const_lre_beh_LRE_Beh_MOMVel,
+		const_lre_beh_LRE_Beh_Obsts
+	)
+assert P_lre_beh_LRE_Beh :[deadlock-free]	
+assert P_lre_beh_LRE_Beh;RUN({r__}) :[deadlock-free]
+assert P_lre_beh_LRE_Beh :[deterministic]
+assert P_lre_beh_LRE_Beh :[divergence-free]
+
+
+

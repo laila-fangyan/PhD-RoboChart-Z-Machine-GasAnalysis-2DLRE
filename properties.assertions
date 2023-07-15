@@ -1,0 +1,63 @@
+import Chemical::*
+import Location::*
+
+assertion A1: GasAnalysis is deterministic.
+assertion A2: GasAnalysis is divergence-free.
+
+csp SpecA3 associated to GasAnalysis csp-begin
+channel done3
+DONE3 = done3 -> DONE3
+SpecA3 = GasAnalysis::O__(0,const_GasAnalysis_thr) [| {|GasAnalysis::stop|} |] GasAnalysis::stop.out -> DONE3
+csp-end
+assertion A3: SpecA3 is deadlock-free.
+
+assertion A4: Movement is divergence-free.
+
+csp SpecA5 associated to Movement csp-begin
+channel done5
+DONE5 = done5 -> DONE5
+SpecA5 = Movement::O__(0, const_Movement_lv, const_Movement_evadeTime, const_Movement_stuckPeriod, const_Movement_stuckDist, const_Movement_outPeriod) [| {|Movement::flag|} |] Movement::flag.out -> DONE5
+csp-end
+assertion A5: SpecA5 is deadlock-free.
+
+untimed assertion A6: ChemicalDetector terminates. 
+
+csp SpecB1 associated to GasAnalysis csp-begin
+SpecB1 = GasAnalysis::gas?x -> (
+	|~|e:{|GasAnalysis::resume, GasAnalysis::stop, GasAnalysis::turn|} @ e->SpecB1
+)
+|~|
+STOP
+|~|
+GasAnalysis::terminate -> SKIP
+csp-end
+
+untimed assertion B1: GasAnalysis refines SpecB1
+
+csp SpecB2 associated to Movement csp-begin
+SpecB2 = let
+	Init = SKIP |~| Movement::randomWalkCall -> SKIP
+	Reaction = |~|e:{|Movement::moveCall, Movement::randomWalkCall, Movement::flag|} @ e->(Reaction|~|SKIP)
+	T = (SKIP |~| (|~|e:{|Movement::turn,Movement::stop, Movement::resume|} @ e->SKIP); Reaction; T)
+	Chaos = STOP |~| (|~| e: {|Movement::obstacle, Movement::odometer, Movement::changeDirectionCall, Movement::shortRandomWalkCall, Movement::resume|} @ e -> Chaos) |~| Movement::terminate -> SKIP
+within
+	(Init ||| T ||| Chaos)
+csp-end
+
+untimed assertion B2: Movement refines SpecB2
+
+csp SpecB3 associated to ChemicalDetector csp-begin
+	NoGas = ChemicalDetector::gas.in.<(0,0)> -> NoGas
+	SpecB3 = ChemicalDetector::O__(
+				0,
+				const_MicroController_stm_ref0_lv, 
+				const_MicroController_stm_ref0_evadeTime, 
+				const_MicroController_stm_ref0_stuckPeriod, 
+				const_MicroController_stm_ref0_stuckDist, 
+				const_MicroController_stm_ref0_outPeriod, 
+				const_MainController_stm_ref0_thr, 
+				const_Location_changeDirection_lv
+	) [| {|ChemicalDetector::gas|} |] NoGas
+csp-end
+
+assertion B3: SpecB3 is deadlock-free.

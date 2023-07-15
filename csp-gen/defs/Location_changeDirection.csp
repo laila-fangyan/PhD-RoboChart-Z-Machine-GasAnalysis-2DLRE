@@ -1,0 +1,426 @@
+module OP_Location_changeDirection
+	-- Only the undefined operations are declared here.
+	-- If the state machine is in isolation, all required operations will be undefined.
+	-- If it is in the context of a controller, the required operations not provided by the
+	-- controller will be declared here, and the defined operations will be defined in the
+	-- context of the Controller module, and therefore within scope of the state machien module.
+	CALL__randomWalk(id__) =  randomWalkCall -> SKIP
+	
+	CALL__shortRandomWalk(id__) =  shortRandomWalkCall -> SKIP
+	
+	CALL__move(id__,
+			    lv,
+			    a) =  moveCall.lv.a -> SKIP
+	
+	
+	
+	-- definition of functions used to expose flow channels
+	ShowEvents(P,E) = P[[ entered.x____.y____ <- enteredV.y____ | entered.x____.y____ <- E]]
+					   [[ enter.x____.y____ <- enterV.y____ | enter.x____.y____ <- E]]
+					   [[ exit.x____.y____ <- exitV.y____ | exit.x____.y____ <- E]]
+					   [[ exited.x____.y____ <- exitedV.y____ | exited.x____.y____ <- E ]]
+						 
+	ShowEnteredV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowEnterV(P) = P[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitV(P) = P[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitedV(P) = P[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+				[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	
+	-- declaring identifiers of state and final states
+	datatype SIDS = SID_changeDirection
+	              | SID_changeDirection_From
+	              | SID_changeDirection_j0
+	
+	-- declaring identifiers of transitions
+	datatype TIDS = NULLTRANSITION__
+	              | TID_changeDirection_t1
+	              | TID_changeDirection_t2
+	              | TID_changeDirection_t3
+	              | TID_changeDirection_t4
+	
+	-- declaring identifiers of transitions that can interupt a state (excludes transitions from junctions)
+	
+	ITIDS = {
+		TID_changeDirection_t1,	TID_changeDirection_t3,	TID_changeDirection_t4
+	}
+	
+	int_int = {|
+		internal__.TID_changeDirection_t1,
+		internal__.TID_changeDirection_t3,
+		internal__.TID_changeDirection_t4
+	|}
+		
+	
+	internal_events = {|enter,entered,exit,exited|}
+	shared_variable_events = {|
+	|}
+			
+	
+	-- declaring all states
+	CS_changeDirection_From_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_changeDirection_From,SID_changeDirection_j0},
+		y____ <- {SID_changeDirection_From}
+	|}
+	
+	
+	changeDirection_From_triggers = {|
+		internal__.TID_changeDirection_t3,
+		internal__.TID_changeDirection_t4,
+		internal__.TID_changeDirection_t1
+	|}
+	
+	State_changeDirection_From(id__,
+			    const_Location_changeDirection_lv) = let
+		T_changeDirection_t1(id__,
+				    const_Location_changeDirection_lv) = internal__!TID_changeDirection_t1 ->  exit.SID_changeDirection_From.SID_changeDirection_From -> SKIP;
+							SKIP;exited.SID_changeDirection_From.SID_changeDirection_From -> SKIP;
+							true&CALL__move(
+										id__,
+										const_Location_changeDirection_lv,
+										Chemical_Angle_Right
+									);enter!SID_changeDirection_From!SID_changeDirection_j0 -> entered!SID_changeDirection_From!SID_changeDirection_j0 ->
+							State_changeDirection_From(id__,
+									    const_Location_changeDirection_lv)
+		T_changeDirection_t3(id__,
+				    const_Location_changeDirection_lv) = internal__!TID_changeDirection_t3 ->  exit.SID_changeDirection_From.SID_changeDirection_From -> SKIP;
+							SKIP;exited.SID_changeDirection_From.SID_changeDirection_From -> SKIP;
+							true&CALL__move(
+										id__,
+										const_Location_changeDirection_lv,
+										Chemical_Angle_Left
+									);enter!SID_changeDirection_From!SID_changeDirection_j0 -> entered!SID_changeDirection_From!SID_changeDirection_j0 ->
+							State_changeDirection_From(id__,
+									    const_Location_changeDirection_lv)
+		T_changeDirection_t4(id__,
+				    const_Location_changeDirection_lv) = internal__!TID_changeDirection_t4 ->  exit.SID_changeDirection_From.SID_changeDirection_From -> SKIP;
+							SKIP;exited.SID_changeDirection_From.SID_changeDirection_From -> SKIP;
+							true&CALL__move(
+										id__,
+										const_Location_changeDirection_lv,
+										Chemical_Angle_Back
+									);enter!SID_changeDirection_From!SID_changeDirection_j0 -> entered!SID_changeDirection_From!SID_changeDirection_j0 ->
+							State_changeDirection_From(id__,
+									    const_Location_changeDirection_lv)
+		State_changeDirection_From_execute(id__,o____) = SKIP; 
+			entered!o____!SID_changeDirection_From ->
+			(SKIP; STOP /\ (
+				T_changeDirection_t1(id__,
+						    const_Location_changeDirection_lv)[]
+				T_changeDirection_t3(id__,
+						    const_Location_changeDirection_lv)[]
+				T_changeDirection_t4(id__,
+						    const_Location_changeDirection_lv)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_changeDirection_t3,TID_changeDirection_t4,TID_changeDirection_t1}) -> exit?y____:diff(SIDS,{SID_changeDirection_From})!SID_changeDirection_From -> (
+						SKIP;
+						exited!y____!SID_changeDirection_From -> SKIP);
+						State_changeDirection_From(id__,
+								    const_Location_changeDirection_lv)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_changeDirection_From})!SID_changeDirection_From -> (State_changeDirection_From_execute(id__,x____))
+	
+	CS_changeDirection_j0_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_changeDirection_From,SID_changeDirection_j0},
+		y____ <- {SID_changeDirection_j0}
+	|}
+	
+	
+	changeDirection_j0_triggers = {|
+	|}
+	
+	State_changeDirection_j0(id__,
+			    const_Location_changeDirection_lv) = let
+		State_changeDirection_j0_execute(id__,o____) = SKIP; 
+			entered!o____!SID_changeDirection_j0 ->
+			terminate -> SKIP
+	within
+		enter?x____:diff(SIDS,{SID_changeDirection_j0})!SID_changeDirection_j0 -> (State_changeDirection_j0_execute(id__,x____))
+	
+	
+	I_changeDirection_i0(id__,
+			    const_Location_changeDirection_lv) = let
+		T_changeDirection_t2(id__,
+				    const_Location_changeDirection_lv) = internal__!TID_changeDirection_t2 -> enter!SID_changeDirection!SID_changeDirection_From -> entered!SID_changeDirection!SID_changeDirection_From ->
+		SKIP
+	within
+		T_changeDirection_t2(id__,
+				    const_Location_changeDirection_lv)
+	
+	
+	State_changeDirection_From_R(id__,
+			    const_Location_changeDirection_lv) = 
+		State_changeDirection_From(id__,
+				    const_Location_changeDirection_lv)
+			[|diff(int_int,changeDirection_From_triggers)|]
+		SKIP
+			 		
+	State_changeDirection_j0_R(id__,
+			    const_Location_changeDirection_lv) = 
+		State_changeDirection_j0(id__,
+				    const_Location_changeDirection_lv)
+			[|diff(int_int,changeDirection_j0_triggers)|]
+		SKIP
+			 		
+		
+	STM(id__,
+			    const_Location_changeDirection_lv) = (
+		I_changeDirection_i0(id__,
+				    const_Location_changeDirection_lv)
+			[|
+				{|enter.x____.y____, entered.x____.y____, exit.x____.y____, exited.x____.y____ |
+					x____ <- diff(SIDS,{SID_changeDirection_From,SID_changeDirection_j0}),
+					y____ <- {SID_changeDirection_From,SID_changeDirection_j0}
+			|}|]
+		(
+			State_changeDirection_From_R(id__,
+					    const_Location_changeDirection_lv)
+				[|inter(CS_changeDirection_From_sync,CS_changeDirection_j0_sync)|]
+			State_changeDirection_j0_R(id__,
+					    const_Location_changeDirection_lv)
+		)
+	)
+	
+	-- optimized memory process
+	channel getV_l: Loc
+	
+	-- individual memory processes
+	Memory_l(l) = (
+		get_l!l -> Memory_l(l)
+		[]
+		getV_l!l -> Memory_l(l)
+		[]
+		set_l?x__ -> Memory_l(x__)
+	)
+	
+	-- processes that read variables and offer transitions
+	MemoryTransitions(id__, l,
+			    const_Location_changeDirection_lv) = 		
+	(((l==Location_Loc_left))&(internal__!TID_changeDirection_t1 -> SKIP)
+	[]
+	internal__!TID_changeDirection_t2 -> SKIP
+	[]
+	((l==Location_Loc_right))&(internal__!TID_changeDirection_t3 -> SKIP)
+	[]
+	((l==Location_Loc_front))&(internal__!TID_changeDirection_t4 -> SKIP)[]
+	set_l?x__ -> SKIP)
+	
+	MemoryTransitions_changeDirection(id__, const_Location_changeDirection_lv) = (getV_l?l ->
+	MemoryTransitions(id__, l,
+			    const_Location_changeDirection_lv); MemoryTransitions_changeDirection(id__, const_Location_changeDirection_lv))			
+	
+	-- synchronisation, hiding and process sets 
+	MemoryVariablesProcesses_changeDirection = Union(
+		{
+			{
+				(Memory_l(Loc_left),{|getV_l,get_l,set_l|})
+			}
+		}
+	)
+	
+	MemoryVariablesSyncSet = Union({
+		{|
+			getV_l,
+			set_l
+		|}	
+	})
+	
+	MemoryVariablesHideSet = Union({
+		{|
+			getV_l
+		|}
+	})
+	
+	-- combined individual memory processes
+	MemoryVariables = ||| (P, alpha) : MemoryVariablesProcesses_changeDirection @ P
+	
+	-- complete memory process	
+	MemoryN(id__, const_Location_changeDirection_lv) = sbisim(diamond((sbisim(diamond(MemoryVariables)) [| MemoryVariablesSyncSet |] sbisim(diamond(MemoryTransitions_changeDirection(id__, const_Location_changeDirection_lv)))) \ MemoryVariablesHideSet))
+	
+	-- optimised memory
+	-- Sets of named elements identified according to transition conditions:
+	-- {}
+	-- {OP_changeDirection::l}
+	-- Summary of all identified named elements:
+	-- {
+	-- OP_changeDirection::l
+	-- }
+	
+	-- Allocation plan:
+	-- 0:{}
+	--	=> {
+	--		TID_changeDirection_t2}
+	-- 1:{OP_changeDirection::l}
+	--	=> {
+	--		TID_changeDirection_t3,
+	--		TID_changeDirection_t4,
+	--		TID_changeDirection_t1}
+	
+	-- Memory transition processes
+	MemoryTransitions_opt_0(id__) =
+	(
+		let
+			Update = Current(id__)
+			Current(id__)
+			 	   = 
+			 	   internal__!TID_changeDirection_t2 -> Update
+		within
+			Update
+	)
+	MemoryTransitions_opt_1(id__) =
+	(
+		let
+			Update = 
+			get_l?l ->
+			Current(id__,
+				 l)
+			Current(id__,
+				 l)
+			 	   = 
+			 	   ((l==Location_Loc_right))&(internal__!TID_changeDirection_t3 -> Update)
+			 	   []
+			 	   ((l==Location_Loc_front))&(internal__!TID_changeDirection_t4 -> Update)
+			 	   []
+			 	   ((l==Location_Loc_left))&(internal__!TID_changeDirection_t1 -> Update)
+			 	   	 
+			 	   	 []
+			 	   	 set_l?x__ -> Update
+		within
+			Update
+	)
+	
+	-- Memory cell processes
+	Memory_opt_l(x__) = ( 
+		get_l!x__ -> Memory_opt_l(x__)
+		[]
+		set_l?x__ -> Memory_opt_l(x__)
+	)
+	
+	-- Composition of memory, StateMachine and Memory transition processes
+	
+	MemorySTM_opt(id__, l, const_Location_changeDirection_lv) =
+		dbisim(
+		  sbisim(Memory_opt_l(Loc_left)
+		      	[| {|get_l,set_l|} |] 
+		      	sbisim(	
+		      	  dbisim(
+		      	    sbisim(sbisim(	
+		      	      dbisim(
+		      	        sbisim(STM_core(id__, l, const_Location_changeDirection_lv)
+		      	          	  [| {|internal__.TID_changeDirection_t2|} |]
+		      	          	  MemoryTransitions_opt_0(id__)
+		      	          	  )\{|internal__.TID_changeDirection_t2|})
+		      	          )
+		      	      	  [| {|internal__.TID_changeDirection_t1,internal__.TID_changeDirection_t3,set_l,internal__.TID_changeDirection_t4|} |]
+		      	      	  MemoryTransitions_opt_1(id__)
+		      	      	  )\{|internal__.TID_changeDirection_t1,internal__.TID_changeDirection_t3,internal__.TID_changeDirection_t4|})
+		      	      )
+		      	) \ {|get_l,set_l|}
+		      )
+	
+	-- main process
+	
+	MachineMemorySyncSet = Union({
+		union(
+			union(
+				{|get_l,set_l|},
+				{||}
+			)
+				
+			,
+			{|internal__.TID_changeDirection_t1,
+			internal__.TID_changeDirection_t2,
+			internal__.TID_changeDirection_t3,
+			internal__.TID_changeDirection_t4|}
+		)
+	})
+	
+	MachineMemoryHidingSet = Union({
+		union(
+			{|get_l,set_l|},
+			{||}
+		)
+	})
+	
+	MachineInternalEvents = {|
+		internal__
+	|}
+	AUX(id__, l, const_Location_changeDirection_lv) = (
+		(
+			set_l!l -> STM(id__,
+					    const_Location_changeDirection_lv)
+				[|MachineMemorySyncSet|]
+			sbisim(diamond(MemoryN(id__, const_Location_changeDirection_lv)))
+		)
+		\MachineMemoryHidingSet
+	)
+	[|{|terminate|}|>SKIP\MachineInternalEvents	
+	
+	STM_core(id__, l, const_Location_changeDirection_lv) = 
+		(set_l!l -> STM(id__,
+				    const_Location_changeDirection_lv)
+		)
+		
+	AUX_opt(id__, l, const_Location_changeDirection_lv) = 
+		(MemorySTM_opt(id__, l, const_Location_changeDirection_lv)
+		)
+		[|{|terminate|}|>SKIP\MachineInternalEvents	
+	
+exports
+	-- flow channels
+	channel internal__ : TIDS
+	channel enteredV, enterV, exitV, exitedV : SIDS
+	channel enter, entered: SIDS.SIDS
+	channel exit,exited: SIDS.SIDS
+	channel terminate
+	
+	-- variable channels
+	channel get_l, set_l: Loc
+			
+	-- shared variable channels
+	
+	-- local variable channels for defined operations that are required by the state machine
+	
+	-- declaring state machine events
+	
+	-- declaring call and ret events for undefined operations
+	channel randomWalkCall
+	channel shortRandomWalkCall
+	channel moveCall: core_real.Chemical_Angle
+	
+	transparent diamond
+	transparent sbisim
+	transparent dbisim
+	transparent chase
+
+	-- definition of the behaviour of state machines (default, optimised, visible, visible and optimised)
+	FVS__(id__, l, const_Location_changeDirection_lv) = AUX_opt(id__, l, const_Location_changeDirection_lv) \ {|terminate|}
+	
+	-- original process using the unoptimised memory model
+	Dunopt__(id__, l, const_Location_changeDirection_lv) = (AUX(id__, l, const_Location_changeDirection_lv) \ internal_events) \ {|terminate|}
+	
+	D__(id__, l, const_Location_changeDirection_lv) = (AUX_opt(id__, l, const_Location_changeDirection_lv) \ internal_events) \ {|terminate|}
+	
+	O__(id__, l, const_Location_changeDirection_lv) = sbisim(diamond(D__(id__, l, const_Location_changeDirection_lv)))
+	VS__(id__, l, const_Location_changeDirection_lv) = ShowV(FVS__(id__, l, const_Location_changeDirection_lv))
+	VS_O__(id__, l, const_Location_changeDirection_lv) = sbisim(diamond(VS__(id__, l, const_Location_changeDirection_lv)))
+endmodule

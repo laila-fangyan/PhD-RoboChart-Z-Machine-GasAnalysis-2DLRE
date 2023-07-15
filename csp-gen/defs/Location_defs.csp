@@ -1,0 +1,11 @@
+-- data definitions used by platform:/resource/ChemicalDetector-autonomous8_use_case_R2/Location.rct
+datatype Location_Loc = Location_Loc_left | Location_Loc_right | Location_Loc_front
+Location_Loc_is(Location_Loc_left,Location_Loc_left) = true
+Location_Loc_is(_,Location_Loc_left) = false
+Location_Loc_is(Location_Loc_right,Location_Loc_right) = true
+Location_Loc_is(_,Location_Loc_right) = false
+Location_Loc_is(Location_Loc_front,Location_Loc_front) = true
+Location_Loc_is(_,Location_Loc_front) = false
+
+
+	

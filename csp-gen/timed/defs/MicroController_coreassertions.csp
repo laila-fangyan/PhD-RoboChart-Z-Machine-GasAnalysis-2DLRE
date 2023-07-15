@@ -1,0 +1,60 @@
+include "Location_defs.csp"
+include "function_toolkit_defs.csp"
+include "MicroController.csp"
+include "Chemical_defs.csp"
+include "relation_toolkit_defs.csp"
+include "set_toolkit_defs.csp"
+include "sequence_toolkit_defs.csp"
+include "core_defs.csp"
+include "file_MicroController_defs.csp"
+include "timed_definitions.csp"
+include "robochart_defs.csp"
+include "../instantiations.csp"
+channel r__
+-- generate MicroController
+P_MicroController = let
+	id__ = 0
+	
+	
+	
+	const_MicroController_stm_ref0_lv = const_Chemical_Movement_lv
+	const_MicroController_stm_ref0_evadeTime = const_Chemical_Movement_evadeTime
+	const_MicroController_stm_ref0_stuckPeriod = const_Chemical_Movement_stuckPeriod
+	const_MicroController_stm_ref0_stuckDist = const_Chemical_Movement_stuckDist
+	const_MicroController_stm_ref0_outPeriod = const_Chemical_Movement_outPeriod
+		
+	const_MicroController_op_ref0_lv = const_changeDirection_lv
+within
+	MicroController::O__(id__,
+			    const_MicroController_stm_ref0_lv,
+			    const_MicroController_stm_ref0_evadeTime,
+			    const_MicroController_stm_ref0_stuckPeriod,
+			    const_MicroController_stm_ref0_stuckDist,
+			    const_MicroController_stm_ref0_outPeriod,
+			   	const_MicroController_op_ref0_lv)
+
+assert P_MicroController :[deadlock-free]	
+assert P_MicroController;RUN({r__}) :[deadlock-free]
+assert P_MicroController :[deterministic]
+assert P_MicroController :[divergence-free]
+
+-- generate MicroController_stm_ref0
+P_MicroController_stm_ref0 = let
+	id__ = 0
+	
+	
+	
+within
+	MicroController::stm_ref0::O__(
+		id__,
+		const_Chemical_Movement_lv,
+		const_Chemical_Movement_evadeTime,
+		const_Chemical_Movement_stuckPeriod,
+		const_Chemical_Movement_stuckDist,
+		const_Chemical_Movement_outPeriod,
+		const_changeDirection_lv
+	)
+assert P_MicroController_stm_ref0 :[deadlock-free]	
+assert P_MicroController_stm_ref0;RUN({r__}) :[deadlock-free]
+assert P_MicroController_stm_ref0 :[deterministic]
+assert P_MicroController_stm_ref0 :[divergence-free]

@@ -1,0 +1,217 @@
+for (p in RC!RCPackage) {
+var para_string: OrderedSet;
+if (p.name="Chemical"){
+
+
+
+for (tr in p.machines.at(0).transitions){ 
+if(not tr.reset.isEmpty() ){
+tr.name.println();
+tr.reset.clock.name.println();
+}
+
+}
+/*
+var zop_tuple = new Tuple;
+//zop_tuple.name = zop_name;
+zop_tuple.hasPara = false;
+zop_tuple.paras = para_string;
+for (tr in p.machines.at(0).transitions){ 
+if(tr.action.isDefined() and tr.action.isTypeOf(CommunicationStmt)){
+
+if(tr.action.communication._type.name="INPUT"){
+
+if(tr.action.communication.parameter.type.isTypeOf(TypeRef)){
+("params "+tr.action.communication.parameter.name+"\\<in> \"" + tr.action.communication.parameter.type.ref.name +"\"").println();
+
+}
+else
+if(tr.action.parameter.type.isTypeOf(SeqType)){
+("params "+tr.action.communication.parameter.name+"\\<in> \"Seq" + tr.action.communication.parameter.type.domain.ref.name+"\"").println();
+
+
+}
+zop_tuple.paras.add(tr.action.communication.parameter.name);
+zop_tuple.paras.println();
+
+}
+}
+
+}
+
+
+for (tr in p.machines.at(0).transitions){ 
+
+var desired_st:String;
+desired_st= tr.target.name;
+(tr.name + "'s target state: "+desired_st).println();
+for (transition in p.machines.at(0).transitions){
+var desired_state_set: Set;
+if (transition.source=tr.target){
+
+desired_state_set.add(transition.target.name);
+desired_state_set.println();
+}
+}
+}
+*/
+
+
+
+
+/*//query the state action
+for (st in p.machines.at(0).nodes.select(s|s.isTypeOf(State)))
+{
+st.println();
+if(st.actions.notEmpty()){
+
+ if(st.actions.at(0).action.isTypeOf(Call)){
+ st.actions.at(0).action.`operation`.name.println();
+ 
+ }
+}
+}*/
+}
+
+
+
+
+//p.machines.events.println();
+
+/*
+for (tr in p.machines.at(0).transitions){ 
+tr.name.println();
+
+
+if(tr.action.isDefined() and tr.action.isTypeOf(CommunicationStmt)and tr.action.communication._type.name="SIMPLE")
+{
+("tr.action: "+tr.action).println();
+("tr.action.communication.event :"+tr.action.communication.event.name).println();("tr.action.communication.type :"+tr.action.communication._type).println();
+("tr.action.communication.type.name: "+tr.action.communication._type.name).println();
+
+(tr.action.communication._type.name="SIMPLE").println();
+
+}
+
+if(tr.trigger.isDefined() and tr.trigger.event.isDefined())
+{
+("tr.trigger: "+tr.trigger).println();
+"tr.trigger.event: ".println();
+
+tr.trigger.event.println();
+("tr.trigger.event.name: "+tr.trigger.event.name).println();
+("pre xx /\\ event_"+tr.trigger.event.name).println();
+tr.trigger.event.type.isDefined().println();
+("tr.trigger.event.type: "+tr.trigger.event.type).println();
+
+}
+if(tr.trigger.isDefined() and tr.trigger._type.isDefined() )
+{"yes".println();
+("tr.trigger._type: "+tr.trigger._type).println();
+
+tr.trigger._type.println();
+tr.trigger._type.name.println();
+
+}
+}
+
+
+for (e in p.machines.at(0).events)
+{("e: "+e).println();
+("e.name: "+e.name).println();
+
+
+if(e.type.isDefined()){
+e.type.type.name.println();
+if(e.type.isTypeOf(TypeRef)){
+"1".println();
+e.type.ref.name.println();
+}
+if(e.type.isTypeOf(SeqType)){
+"2".println();
+e.type.domain.ref.name.println();
+
+}
+
+}
+else {"this is a simple event".println();}
+
+
+
+}*/
+
+}
+
+
+
+/////////////////////////////////////////////////////////////////////
+//the following code is valid and to test the way out of querying types
+//the solution has been incooperated into the thy_generation.egl
+/*
+for (p in RC!RCPackage) {
+ 
+if (p.name="Chemical"){
+
+for (vrl in p.machines.variableList)
+{
+var i=0;
+while(i< vrl.vars.size()){
+
+"vrl.vars.at(i).at(0).type:".println();
+vrl.vars.at(i).at(0).type.println();
+
+"vrl.vars.at(i).at(0).type.type:".println();
+vrl.vars.at(i).at(0).type.type.println();
+
+
+"vrl.vars.at(i).at(0).type.type.name:".println();
+vrl.vars.at(i).at(0).type.type.name.println();
+if(vrl.vars.at(i).modifier.literal.at(0)="VAR"){
+"vrl.vars.at(i).at(0).type=TypeRef ?".println();
+(vrl.vars.at(i).at(0).type=TypeRef).println();
+if(vrl.vars.at(i).at(0).type.isTypeOf(TypeRef)){
+"FINALLY".println();
+}
+if(vrl.vars.at(i).at(0).type.type.name="TypeRef"){
+"FINALLY 2".println();
+}
+//it does not work with if(vrl.vars.at(i).at(0).type=TypeRef), so use the keyword 'ref'
+//but I don't know why
+//this ISSUE OCCURS also in the function query section
+if(vrl.vars.at(i).at(0).type.ref.isDefined()){
+(vrl.vars.at(i).at(0).name+ " :: \"" + vrl.vars.at(i).at(0).type.ref.name +"\"").println();}
+else 
+//"vrl.vars.at(i).at(0).type=SeqType?".println();
+//(vrl.vars.at(i).at(0).type="SeqType").println();
+////it does not work with if(vrl.vars.at(i).at(0).type=SeqRef), so use the keyword 'domain'
+if(vrl.vars.at(i).at(0).type.domain.isDefined()){
+if(vrl.vars.at(i).at(0).type.isTypeOf(SeqType)){
+"FINALLY AGAIN".println();
+}
+if(vrl.vars.at(i).at(0).type.type=SeqType){
+"FINALLY AGAIN 2".println();
+}
+(vrl.vars.at(i).at(0).name+ " :: \"" + vrl.vars.at(i).at(0).type.domain.ref.name +" list\"").println();}
+}
+
+i++;
+}}}}
+*/
+
+operation RC!CallExp functionString(): String
+{var args_string: String;
+//to get the parameter on the right
+args_string= self.args.at(0).ref.name;
+
+//for the case that more than 2 args, we need insert ',' between args
+var i=1;
+while(i<self.args.size()){
+
+arg_string=args_string+ ", "+ self.args.at(i).ref.name;
+i++;
+}
+return  self.`function`.ref.name+"("+args_string +")";
+}
+
+
+

@@ -1,0 +1,20 @@
+include "Chemical.csp"
+
+-- generate Chemical_GasAnalysis
+P_Chemical_GasAnalysis = let
+	id__ = 0
+	
+	
+	
+within
+	Chemical::GasAnalysis::O__(
+		id__,
+		const_Chemical_GasAnalysis_thr
+	)
+assert P_Chemical_GasAnalysis :[deadlock-free]	
+assert P_Chemical_GasAnalysis;RUN({r__}) :[deadlock-free]
+assert P_Chemical_GasAnalysis :[deterministic]
+assert P_Chemical_GasAnalysis :[divergence-free]
+
+
+

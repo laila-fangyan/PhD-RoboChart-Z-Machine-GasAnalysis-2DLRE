@@ -1,0 +1,78 @@
+import Chemical::*
+import Location::*
+
+stm GasAnalysis {
+	var st : Status
+	var gs : Seq(GasSensor)
+	var ins : Intensity
+	var anl : Angle
+	event gas : Seq(GasSensor) //Seq can be treated as vector
+	event resume
+	
+	
+	const thr : Intensity
+	
+	event turn : Angle
+	event stop
+initial i1
+	state NoGas {
+	}
+	state Analysis {
+		entry st = analysis ( gs )
+	}
+	state GasDetected {
+		entry ins = intensity ( gs )
+	}
+	transition t1 {
+		from i1
+		to NoGas
+		action 
+	gs = < > ; anl = Angle :: Front
+	}
+	transition t2 {
+		from NoGas
+		to Analysis
+		trigger 
+	
+	gas ? gs
+	}
+	transition t3 {
+		from Analysis
+		to NoGas
+		condition st == Status::noGas
+		action 
+	send resume
+	}
+	transition t4 {
+		from Analysis
+		to GasDetected
+		condition st == Status::gasD
+	}
+	final j1
+	state Reading {
+	}
+	transition t8 {
+		from GasDetected
+		to j1
+		condition goreq ( ins , thr )
+		action 
+	send stop
+	}
+	transition t9a {
+		from GasDetected
+		to Reading
+		condition 
+		
+		
+		not goreq ( ins , thr )
+		action anl = location ( gs ) ; turn ! anl
+	}
+	transition t0 {
+		from Reading
+		to Analysis
+		trigger 
+	
+	gas ? gs
+	}
+}
+

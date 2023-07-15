@@ -1,0 +1,17 @@
+module OP_Chemical_move
+exports
+	Timed(OneStep) {
+	D__(id__,
+				lv,
+				a) = let
+	AUX(N) = if (N == 0) then SKIP else
+		  SKIP
+	      	      	within AUX(Chemical_move_BOUND)
+	
+	O__(id__,
+				lv,
+				a) = D__(id__,
+				lv,
+				a)
+	}
+endmodule

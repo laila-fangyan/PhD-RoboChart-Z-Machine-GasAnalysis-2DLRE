@@ -1,0 +1,116 @@
+package Chemical
+//this is not the original version of chemical.rct
+//this version combine chemical.rct and gasAnalysis.rct into one 
+//also completed the functions
+enumeration Status {  noGas gasD } import sequence_toolkit::*
+enumeration Angle { Left Right Back Front }
+datatype GasSensor {
+	c : Chem
+	i : Intensity
+}
+type Chem
+type Intensity
+
+//Analyze whether there is gas or not
+function analysis( gs : Seq( GasSensor )) : Status {
+		precondition size ( gs ) > 0
+    postcondition exists x: nat | 0 < x /\ x <= size (gs) /\ gs[x].i>0 @ result == gasD
+	postcondition forall y: nat | 0 < y /\ y <= size (gs) /\ gs[y].i==0 @  result == noGas
+	 
+}
+
+//check if intensity is high enough
+function goreq(  i1 : Intensity , i2 : Intensity) : boolean {
+postcondition result == (i1 > i2)}
+
+//Return the highest intensity
+function intensity( gs : Seq( GasSensor )) : Intensity {
+	precondition size ( gs ) > 0
+	postcondition forall x : nat | 0 < x /\ x <= size ( gs ) @ goreq ( result , gs [ x ] . i )
+	postcondition exists y: nat | 0 < y /\ y <= size (gs) @ result == gs[y].i
+}
+function location( gs : Seq( GasSensor )) : Angle {
+	precondition size ( gs ) > 0
+	postcondition exists x : nat | 0 < x /\ x <= size ( gs ) @ gs [ x ] . i == intensity ( gs ) /\ result == angle ( x )
+}
+function angle( x : nat) : Angle { 
+//precondition 0< x /\ x<=360
+	postcondition if 0< x< 90 then result ==Front else if 90<= x<180 then result ==Right else if 180<= x< 270 then result ==Back	else result==Left end end end }
+
+
+function card(A:Set(?X)): nat {
+}
+
+import Location::*
+
+stm GasAnalysis {
+	var sts : Status
+	var gs : Seq(GasSensor)
+	var ins : Intensity
+	var anl : Angle
+	event gas : Seq(GasSensor) //Seq can be treated as vector
+	event resume
+	
+	
+	const thr : Intensity
+	
+	event turn : Angle
+	event stop
+initial i1
+
+	state GasDetected {
+		entry ins = intensity ( gs )
+	}
+		final j1
+	state Reading {
+	}
+	state Analysis {
+		entry sts = analysis(gs)
+	}
+	state NoGas {
+	}
+	
+	transition t1 {
+		from i1
+		to Reading
+		action gs = < > ; anl = Angle :: Front
+	}
+	transition t0 {
+		from Reading
+		to Analysis
+		trigger gas ? gs
+	}
+	transition t2 {
+		from NoGas
+		to Reading
+	}
+	transition t3 {
+		from Analysis
+		to NoGas
+		condition sts==Status::noGas
+		action send resume
+	}
+	transition t4 {
+		from Analysis
+		to GasDetected
+		condition sts == Status::gasD
+	}
+
+	transition t8 {
+		from GasDetected
+		to j1
+		condition goreq ( ins , thr )
+		action send stop
+	}
+	transition t9a {
+		from GasDetected
+		to Reading
+		condition not goreq (ins, thr)
+		action anl=location(gs); turn!anl
+	}
+
+
+	
+}
+
+

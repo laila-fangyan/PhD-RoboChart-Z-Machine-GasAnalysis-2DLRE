@@ -1,0 +1,210 @@
+//2022.6.30 this is for record, and not a effective version
+//2 bugs in this version
+//1st is the repetition of the query return.
+//2nd is the functions include both self defined and the ones in function_toolkit package
+//Pedro gave me the solution: to constrain the query within the Chemical package
+//THis is done in R2 version. 
+
+
+for (t in RC!Transition.allInstances)
+{ 
+("transition: " + t.name + ", transition source: " + t.source.name +", transition target: " + t.target.name).println();
+/*if (t.trigger.isDefined())
+{"t.trigger.isDefined".println();
+if(t.trigger._type.isDefined())
+{"t.trigger._type.isDefined".println();
+"a".println();
+t.trigger._type.println();
+"a".println();
+if(t.trigger._type.name="INPUT")
+{"yes".println();}else {"no".println();}
+("x:" + t.trigger._type.name).println();
+}}*/
+
+if(t.trigger.isDefined() and t.trigger._type.isDefined() and t.trigger._type.name="INPUT")
+{
+("t.trigger: " + t.trigger.event.name + "?" + t.trigger.parameter.name).println();
+}
+if (t.condition.isDefined() )
+{
+("t.condition: " + t.condition).println();
+}
+if (t.action.isDefined() )
+{
+("t.action: " + t.action).println();
+}
+"".println();
+}
+
+"Completion of transition query".println();
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//query the enumaration tyep
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the enumaration type".println();
+/*if(RC!Enumeration.allInstances.isDefined()){
+"RC!Enumeration.allInstances is defined".println();
+("RC!Enumeration.allInstances: "+ RC!Enumeration.allInstances).println();}
+else {"RC!Enumeration.allInstances is NOT defined".println();}
+// ISDefined is not useful to detect if this type is used. it can return true with an empty seq of enumarate type.
+*/
+
+var i: Integer;
+
+for (e in RC!Enumeration.allInstances)
+{
+("e.name: " + e.name).println();
+("e.literals.size: "  + e.literals.size()).println();
+i=0;
+while(i<e.literals.size()){
+("literal "+ i +": " + e.literals.at(i).name).println();
+i++;
+}
+// answer as follow, it has repeat, need to FIX
+// where is the repeat from?
+/*
+e.name: Status
+e.literals.size: 2
+literal 0: noGas
+literal 1: gasD
+e.name: Angle
+e.literals.size: 4
+literal 0: Left
+literal 1: Right
+literal 2: Back
+literal 3: Front
+e.name: Status
+e.literals.size: 2
+literal 0: noGas
+literal 1: gasD
+e.name: Angle
+e.literals.size: 4
+literal 0: Left
+literal 1: Right
+literal 2: Back
+literal 3: Front
+*/
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+//query the Primitive type
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the Primitive type".println();
+for (p in RC!PrimitiveType.allInstances)
+{
+if(p.name != "real" and p.name != "boolean" and p.name != "string" and p.name != "nat" and p.name != "int"){
+("p.name: " + p.name).println();}
+}
+/* answer has repeat, where is the repeat from?
+p.name: Chem
+p.name: Intensity
+p.name: Chem
+p.name: Intensity
+*/
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+//query the record type. answer has repeat, where is the repeat from?
+//I tried to delete the imports in the rct files to extact the new EMF models, didn't work
+"////////////////////////////////////////////////////////////////////////////////".println();
+/*"Query the record type".println();
+if(RC!RecordType.allInstances.isDefined()){
+"RC!RecordType.allInstances is defined".println();
+("RC!RecordType.allInstances: " + RC!RecordType.allInstances).println();}*/
+for (r in RC!RecordType.allInstances)
+{("r.name: " + r.name).println();
+("r.fields.size: "  + r.fields.size()).println();
+i=0;
+while(i<r.fields.size()){
+("field "+ i +": " + r.fields.at(i).name + ": " ).println();
+
+("field.Type.name : " +r.fields.at(i).Type.ref.name).println();
+i++;
+}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//query the function
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the function".println();
+for (f in RC!Function.allInstances)
+{ if(f.parameters.isDefined()){
+f.name.println();}
+}
+//the query returns all the functions including the buildin ones, not only the self defined ones
+//how to filter out the buildin ones???
+//To Do
+//are the buildin functions exclusive, are there any other buildin functions not included here?
+//if not, using if(f.name not in { , , , ,}) to filter out buildin functions 
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//query the statemachine and variables and constants
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the statemachine and variables".println();
+for (stm in RC!StateMachineDef.allInstances)
+{ 
+("stm.name: "+stm.name).println();
+}
+for (vrl in RC!VariableList.allInstances)
+{ 
+/*
+("vrl.modifier:"+ vrl.modifier).println();
+("vrl.modifie.literal: "+ vrl.modifier.literal).println();
+("vrl.modifier.value: "+ vrl.modifier.value).println();
+vrl.vars.size().println();
+vrl.vars.at(0).name.println();
+if(vrl.vars.at(0).name="st"){
+"okokok".println();
+}
+*/
+
+if(vrl.modifier.literal="VAR"){
+"This is a variable".println();
+"".println();
+var i=0;
+while(i< vrl.vars.size()){
+vrl.vars.at(i).name.println();
+i++;}}
+else if(vrl.modifier.literal="CONST"){
+"This is a constant".println();
+"".println();
+var j=0;
+while(j< vrl.vars.size()){
+vrl.vars.at(j).name.println();
+j++;}}
+}
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//query the states
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the states".println();
+var k=0;
+var state_set: OrderedSet;
+// type 'Set' is not working as it add the new element in random order, 
+//not always add to the end but may insert in the middle somewhere
+var enum_output: String;
+var set_output: String;
+for (st in RC!State.allInstances)
+{
+("state_" + k+": "+st.name).println();
+state_set.add(st.name);
+//("state_set: "+ state_set).println();
+enum_output= enum_output+ state_set.at(k) +" | ";
+set_output= set_output+ state_set.at(k) +", ";
+//("OUTPUT: "+ output).println();
+k++;
+}
+
+//to add the context for thy file "enumtype ProperState = "
+//to add the initial, initial is a juction, not a state, so can not be queried through state
+//to cut the last vertical bar
+enum_output= "enumtype ProperState = initial | " + enum_output.substring(0,(enum_output.length()-2));
+("FINAL OUTPUT: "+ enum_output).println();
+set_output= "definition \"ProperState = {initial, " + set_output.substring(0,(set_output.length()-2))+"}\"";
+("FINAL OUTPUT: "+ set_output).println();
+
+
+"////////////////////////////////////////////////////////////////////////////////".println();

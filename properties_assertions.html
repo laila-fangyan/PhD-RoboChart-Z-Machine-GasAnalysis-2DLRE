@@ -1,0 +1,126 @@
+<html>
+	<head>
+	<title>Results of analysis of assertions in properties.assertions using FDR</title>
+	<style>
+		table, th, td {
+		    border: 1px solid black;
+		    border-collapse: collapse;
+		    padding: 15px;
+		}
+		th {
+			text-align: left;
+		}
+	</style>
+	</head>
+	<body>
+	<h2>Results of untimed analysis of assertions in properties.assertions using FDR</h2>
+	<table>
+	<tr>
+	<th>Assertion</th>
+	<th>States</th>
+	<th>Transitions</th>
+	<th>Result</th>
+	</tr>
+	<tr>
+	<td>GasAnalysis is deterministic (A1) [failures divergences model]</td>
+	<td>6</td>
+	<td>26</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>GasAnalysis is divergence free (A2) [failures divergences model]</td>
+	<td>6</td>
+	<td>26</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>SpecA3 is deadlock free (A3) [failures divergences model]</td>
+	<td>5</td>
+	<td>27</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>Movement is divergence free (A4) [failures divergences model]</td>
+	<td>30</td>
+	<td>107</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>SpecA5 is deadlock free (A5) [failures divergences model]</td>
+	<td>29</td>
+	<td>108</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>untimed ChemicalDetector terminates (A6)</td>
+	<td>8</td>
+	<td>72</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>untimed GasAnalysis refines SpecB1 (B1) [failures divergences model]</td>
+	<td>6</td>
+	<td>26</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>untimed Movement refines SpecB2 (B2) [failures divergences model]</td>
+	<td>32</td>
+	<td>120</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>SpecB3 is deadlock free (B3) [failures divergences model]</td>
+	<td>3</td>
+	<td>7</td>
+	<td>true</td>
+	</tr>
+	</table>
+	
+	<h2>Results of timed analysis of assertions in properties.assertions using FDR</h2>
+	<table>
+	<tr>
+	<th>Assertion</th>
+	<th>States</th>
+	<th>Transitions</th>
+	<th>Result</th>
+	</tr>
+	<tr>
+	<td>GasAnalysis is deterministic (A1) [failures divergences model]</td>
+	<td>548</td>
+	<td>1011</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>GasAnalysis is divergence free (A2) [failures divergences model]</td>
+	<td>548</td>
+	<td>1011</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>SpecA3 is deadlock free (A3) [failures divergences model]</td>
+	<td>2</td>
+	<td>25</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>Movement is divergence free (A4) [failures divergences model]</td>
+	<td>81848</td>
+	<td>167682</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>SpecA5 is deadlock free (A5) [failures divergences model]</td>
+	<td>77</td>
+	<td>264</td>
+	<td>true</td>
+	</tr>
+	<tr>
+	<td>SpecB3 is deadlock free (B3) [failures divergences model]</td>
+	<td>3</td>
+	<td>7</td>
+	<td>true</td>
+	</tr>
+	</table>
+	</body>
+</html>

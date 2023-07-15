@@ -1,0 +1,30 @@
+include "function_toolkit_defs.csp"
+include "Chemical_defs.csp"
+include "relation_toolkit_defs.csp"
+include "set_toolkit_defs.csp"
+include "Chemical_Movement.csp"
+include "sequence_toolkit_defs.csp"
+include "core_defs.csp"
+include "timed_definitions.csp"
+include "robochart_defs.csp"
+include "../instantiations.csp"
+channel r__
+-- generate Chemical_Movement
+P_Chemical_Movement = let
+	id__ = 0
+	
+	
+	
+within
+	Chemical_Movement::O__(
+		id__,
+		const_Chemical_Movement_lv,
+		const_Chemical_Movement_evadeTime,
+		const_Chemical_Movement_stuckPeriod,
+		const_Chemical_Movement_stuckDist,
+		const_Chemical_Movement_outPeriod
+	)
+assert P_Chemical_Movement :[deadlock-free]	
+assert P_Chemical_Movement;RUN({r__}) :[deadlock-free]
+assert P_Chemical_Movement :[deterministic]
+assert P_Chemical_Movement :[divergence-free]

@@ -1,0 +1,774 @@
+[%
+/*
+"TOTAL SIZE".println();
+RC!RCPackage.size().println();
+var statemachine_name: String;
+for (p in RC!RCPackage)
+{ 
+"PRINT .machines.SIZE".println();
+p.machines.size().println();
+"PRINT p.machines.at(0).name;".println();
+statemachine_name=p.machines.at(0).name;
+statemachine_name.println();
+}*/
+
+var stm_name: String;
+for (stm in RC!StateMachineDef.allInstances)
+{ 
+stm_name=stm.name;
+}
+
+ var javaDate = new Native("java.text.SimpleDateFormat")("ddMMyyyy_hhmmss").
+  format(new Native("java.util.Date"));
+ var javaDateString = new String;
+ javaDateString= javaDate.toString();
+
+%]
+theory [%=stm_name%]_[%=javaDateString%]
+imports "Z_Machines.Z_Machine"
+begin
+
+notation undefined ("???")
+
+subsection \<open> Introduction \<close>
+
+text \<open> This theory file is to model the [%=stm_name%] state machine in Z Machine notations.\<close>
+
+subsection \<open> type definition \<close>
+
+[%
+for (p in RC!RCPackage) {
+if (p.name="Chemical"){
+ 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//query the states  to generate enumtype
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the states".println();
+//we assume there is ONLY ONE state machine in the package
+//p.machines.at(0).nodes.size().println();
+ 
+var k=0;
+//var state_set: OrderedSet;
+// type 'Set' is not working as it add the new element in random order, 
+//not always add to the end but may insert in the middle somewhere
+var enum_output: String;
+var set_output: String;
+/* 
+for (n in p.machines.at(0).nodes){
+if (n.isTypeOf(Initial)){
+("Initial name: " +n.name).println();
+}
+enum_output= enum_output+ n.name +" | ";
+set_output= set_output+ n.name +", ";
+if (n.isTypeOf(State)){
+enum_output= enum_output+ n.name +" | ";
+set_output= set_output+ n.name +", ";
+}
+ }
+// there is no need to differenriate the Initial State. they are two different types
+//but they are both nodes, so we only query nodes, that's enough.
+so the code above can be replaced by the 3 lines below.
+*/
+ 
+
+ for (n in p.machines.at(0).nodes){
+ enum_output= enum_output+ n.zmState() +" | ";
+set_output= set_output+ n.zmState() +", ";}
+ 
+ //to add the context for thy file "enumtype ProperState = "
+//to add the initial, initial is a juction, not a state, so can not be queried through state
+//to cut the last vertical bar
+enum_output= "enumtype ProperState = " + enum_output.substring(0,(enum_output.length()-2));
+%]
+[%=enum_output%]
+[%set_output= "definition \"ProperState = {" + set_output.substring(0,(set_output.length()-2))+"}\"";
+%]
+
+[%=set_output%] 
+
+[%
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//query the TYPES
+"////////////////////////////////////////////////////////////////////////////////".println();
+"Query the types".println();
+/////////////////////////////////////////////////////////////////////
+//for enumeration type
+for (e in p.types)
+{
+e.type().name.println();
+("e.name: " + e.name).println();
+ if(e.type().name="Enumeration"){
+ var enumtype_output: String;
+ var enumtype_set_output: String;
+ var i=0;
+while(i<e.literals.size()){
+//("literal "+ i +": " + e.literals.at(i).name).println();
+enumtype_output=enumtype_output+ e.literals.at(i).name +" | ";
+enumtype_set_output=enumtype_set_output+ e.literals.at(i).name +", ";
+i++;
+}
+enumtype_output="enumtype "+ e.name + " = "+ enumtype_output.subString(0, (enumtype_output.length()-3));
+("final enumtype_output: " +enumtype_output).println();
+%]
+[%=enumtype_output%]
+
+[%enumtype_set_output="definition \""+ e.name + " = {"+ enumtype_set_output.subString(0, (enumtype_set_output.length()-2))+ "}\"";
+("final enumtype_set_output: " +enumtype_set_output).println();%]
+[%=enumtype_set_output%]
+
+[%
+ }
+}
+
+/////////////////////////////////////////////////////////////////////
+//for primitive type
+//I repeat "for(e in p.types)" for primitive, record, instead of put all types under one "for(e in p.types)"
+//the reason is that I need to generate primitive type first, then the record type which use the primitive type
+//in RoboChart these two types can be defined in either order
+//but in thy primitive for the record has to be defined first, then be used in record
+"/////////////////////////////////////////////////////////////////////".println();
+"query for primitive type".println();
+for (e in p.types)
+{
+ if(e.type().name="PrimitiveType"){
+  var primitiveType_output: String;
+  primitiveType_output="type_synonym " + e.name + "= \"nat\"";
+  primitiveType_output.println();%]
+[%=primitiveType_output%]
+  
+ [%}
+ }
+
+
+/////////////////////////////////////////////////////////////////////
+//for record type
+"/////////////////////////////////////////////////////////////////////".println();
+"query for record type".println();
+for (e in p.types)
+{
+ if(e.type().name="RecordType"){%]
+record [%=e.name%] =
+ [%
+ // var recordType_output: String;
+  var i=0;
+while(i<e.fields.size()){
+(e.fields.at(i).name + " :: " + e.fields.at(i).Type.ref.name).println();%]
+  [%=e.fields.at(i).name%] :: [%=e.fields.at(i).Type.ref.name%]
+[%//recordType_output=e.fields.at(i).name + " :: " + e.fields.at(i).Type.ref.name;
+i++;
+}
+("record_default " + e.name).println();%]
+record_default [%=e.name%]
+
+[%//recordType_output="record " + e.name + "= "+ recordType_output;
+//("recordType_output: " + recordType_output).println();
+ }
+}
+ 
+/////////////////////////////////////////////////////////////////////
+//query for functions 
+"/////////////////////////////////////////////////////////////////////".println();
+"query for functions".println();%]
+
+text \<open> function definition \<close>
+
+[%
+//function card is not used in the GasAnalysis, so I FILTER IT OUT
+//another MAJOR reason is that card.type()=SetType
+//SetType is the parent of SeqType, 
+//so it has property 'domain' too
+//currently, I am using the difference in the property between SeqType and other TypeRef
+//but both SetType and SeqType has domain.
+//For GasAnalysis use case, it is okay,
+//but for other use cases, if both types are used, I then have to find another way to differentiate them
+for (f in p.functions.select(s|s.name!="card"))
+{ 
+var function_string: String;
+//f.name.println();
+//f.type.ref.name.println();
+//f.parameters.size().println();
+//f.parameters.at(0).name.println();
+//be CAREFUL, type and type() are different
+//type is the property, to return the type defined in the use case
+//type() is the method, to return the class in the metamodel
+//they return different value: SeqType, parameter
+//f.parameters.at(0).type.println();
+//f.parameters.at(0).type().println();
+//f.parameters.at(0).type().name.println();
+
+
+//CASE 1: single parameter
+//pattern: consts f.name :: " parameter_type => f.type"
+if(f.parameters.size()=1){
+
+//TO DO
+//here I only consider the parameter type to be SeqType
+// I have not consider the function type to be SeqType
+if(f.parameters.at(0).type.domain.isDefined()){
+"this is a SeqType".println();
+("consts "+f.name+ " :: \" "+ f.parameters.at(0).type.domain.ref.name +" list \\<Rightarrow> "+ f.type.ref.name+"\"").println();
+function_string="consts "+f.name+ " :: \" "+ f.parameters.at(0).type.domain.ref.name +" list \\<Rightarrow> "+ f.type.zmType()+"\"";
+}else if(f.parameters.at(0).type.ref.isDefined()){
+("consts "+f.name+ " :: \" "+ f.parameters.at(0).type.zmType() +" \\<Rightarrow> "+ f.type.ref.name+"\"").println();
+//function_string= "consts "+f.name+ " :: \" "+ f.parameters.at(0).type.ref.name +" \\<Rightarrow> "+ f.type.ref.name+"\"";
+function_string= "consts "+f.name+ " :: \" "+ f.parameters.at(0).type.zmType() +" \\<Rightarrow> "+ f.type.zmType()+"\"";
+}}
+//CASE 2: multiple parameters, we will need pXp pattern in ZM
+//pattern: consts f.name :: " parameter_type (X parameter_type)* => f.type"
+else if(f.parameters.size()>1){
+
+// generate the first part of parameter
+if(f.parameters.at(0).type.domain.isDefined()){
+"SeqType domain: ".println();
+f.parameters.at(0).type.domain.ref.name.println();
+function_string=f.parameters.at(0).type.domain.ref.name;
+} else if(f.parameters.at(0).type.ref.isDefined()){
+f.parameters.at(0).type.zmType().println();
+function_string=f.parameters.at(0).type.zmType();
+}
+
+// generate the rest part of parameter: (X parameter_type)*
+var i=1;
+while(i<f.parameters.size()){
+
+//again, here I can not use if(f.parameters.at(i).isTypeOf(SeqType))
+// or if(f.parameters.at(i).type="SeqType")
+//it is the same for the zstore section
+//BUT WHY?
+if(f.parameters.at(i).type.domain.isDefined()){
+"SeqType domain: ".println();
+f.parameters.at(i).type.domain.ref.name.println();
+function_string=function_string+" \\<times> " + f.parameters.at(i).type.domain.ref.name;
+} else if(f.parameters.at(i).type.ref.isDefined()){
+f.parameters.at(i).type.zmType().println();
+function_string=function_string+" \\<times> " + f.parameters.at(i).type.zmType();
+}
+
+i++;
+}
+function_string="consts "+f.name+ " :: \" "+function_string+" \\<Rightarrow>"+ f.type.zmType()+"\"";
+"OUTPUT FUNCTION STRING:".println();
+function_string.println();
+
+}
+
+%]
+
+[%=function_string%]
+
+[%
+
+//if(f.preconditions.isDefined()){
+//f.preconditions.println();}
+//if(f.postconditions.isDefined()){
+//f.postconditions.println();}
+//"OUTPUT:".println();
+//("consts "+f.name + " :: \""+
+}
+%]
+subsection \<open> State Space \<close>
+[%
+/////////////////////////////////////////////////////////////////////
+//query for the statemachine and variables and consts TO generate zstore
+"/////////////////////////////////////////////////////////////////////".println();
+"variable and constants query TO generate zstore".println();
+var stm_name: String;
+for (stm in p.machines){ 
+//("stm.name: "+stm.name).println();
+stm_name=stm.name;
+}%]
+
+zstore [%=stm_name%] =
+[%for (vrl in p.machines.variableList)
+{ 
+//vrl.vars.size().println();
+//vrl.modifier.literal.println();
+//vrl.vars.at(i).modifier.literal.println();
+//vrl.vars.at(i).modifier.literal.at(0).println();
+var i=0;
+while(i< vrl.vars.size()){
+//vrl.vars.at(i).at(0).type.println();
+var variable_string: String;
+if(vrl.vars.at(i).modifier.literal.at(0)="VAR"){
+
+//it does not work with if(vrl.vars.at(i).at(0).type=TypeRef), so use the keyword 'ref'
+//but I don't know why
+//this ISSUE OCCURS also in the function query section
+if(vrl.vars.at(i).at(0).type.ref.isDefined()){
+(vrl.vars.at(i).at(0).name+ " :: \"" + vrl.vars.at(i).at(0).type.ref.name +"\"").println();
+variable_string=vrl.vars.at(i).at(0).name+ " :: \"" + vrl.vars.at(i).at(0).type.ref.name +"\"";
+}
+else 
+////it does not work with if(vrl.vars.at(i).at(0).type=SeqRef), so use the keyword 'domain'
+if(vrl.vars.at(i).at(0).type.domain.isDefined()){
+(vrl.vars.at(i).at(0).name+ " :: \"" + vrl.vars.at(i).at(0).type.domain.ref.name +" list\"").println();
+variable_string=vrl.vars.at(i).at(0).name+ " :: \"" + vrl.vars.at(i).at(0).type.domain.ref.name +" list\"";
+}
+}%]
+  [%=variable_string%]
+[%i++;
+}
+}%]
+  act_st::"ProperState"
+where inv: "To be entered manually"
+
+subsection \<open> Operations \<close>
+
+[%
+/////////////////////////////////////////////////////////////////////
+//query for the transitions TO zoperations
+"/////////////////////////////////////////////////////////////////////".println();
+"transitions query TO generate zoperations".println();
+//zoperations_string is used for zmachine section
+//zoperations_set is used for the lemma of structural invariant section
+var zoperations_string:String;
+var zoperations_set: OrderedSet;
+var zop_name: String;
+for (tr in p.machines.at(0).transitions){ 
+"START NEW TRANSITION QUERY".println();
+("tr.name: "+tr.name).println();
+
+
+
+
+/*
+//the following lines have been replaced by the zmState() operation
+if(tr.source.isTypeOf(Initial)){
+("zoperation InitialTo"+tr.target.name+" =").println();
+zop_name="InitialTo"+tr.target.name;}
+else if(tr.source.isTypeOf(State)){
+if(tr.target.isTypeOf(Final)){
+("zoperation "+tr.source.name+"ToFinal =").println();
+zop_name=tr.source.name+"ToFinal";
+}else
+{("zoperation "+tr.source.name+"To"+tr.target.name+" =").println();
+zop_name=tr.source.name+"To"+tr.target.name;
+}
+}
+*/
+
+zop_name=tr.source.zmStateCapt()+"To"+tr.target.zmStateCapt();
+zop_name.println();
+
+zoperations_string=zoperations_string+" "+ zop_name;
+zoperations_set.add(zop_name);
+%]
+zoperation [%=zop_name%] =
+  over [%=stm_name%]
+[%
+//////////////////////////////////////////////////////
+//query for the transitions TO generate params section
+var trigger_type_string: String;
+if(tr.trigger.isDefined() and tr.trigger._type.isDefined() and tr.trigger._type.name="INPUT")
+{
+
+if(tr.trigger.parameter.type.ref.isDefined()){
+("params "+tr.trigger.parameter.name+"\\<in> \"" + tr.trigger.parameter.type.ref.name +"\"").println();
+trigger_type_string=tr.trigger.parameter.type.ref.name;}
+else 
+////it does not work with if(vrl.vars.at(i).at(0).type=SeqRef), so use the keyword 'domain'
+if(tr.trigger.parameter.type.domain.isDefined()){
+("params "+tr.trigger.parameter.name+"\\<in> \"Seq" + tr.trigger.parameter.type.domain.ref.name+"\"").println();
+trigger_type_string="Seq" + tr.trigger.parameter.type.domain.ref.name;
+}
+%]
+  params [%=tr.trigger.parameter.name%]\<in>"[%=trigger_type_string%]"
+[%
+("tr.trigger: " + tr.trigger.event.name + "?" + tr.trigger.parameter.name).println();
+}
+
+
+
+
+//////////////////////////////////////////////////////
+//query for the transitions TO generate pre section
+//subsection 1:state constraint
+var pre_string: String;
+
+/*
+//these 7 lines have been replaced by zmState()
+if(tr.source.isTypeOf(Initial)){
+("pre \"act_st= initial").println();
+pre_string="pre \"act_st= initial";}
+else {
+("pre \"act_st= "+tr.source.name+"\"").println();
+pre_string="pre \"act_st= "+tr.source.name;
+}
+*/
+pre_string="pre \"act_st= "+tr.source.zmState();
+
+//subsection 1:transition condition -> pre
+if (tr.condition.isDefined() )
+{
+("tr.condition: " + tr.condition).println();
+
+//CASE 1: equal condition
+if(tr.condition.isTypeOf(Equals)){
+("left: "+tr.condition.left.ref.name).println();
+
+if(tr.condition.right.isTypeOf(EnumExp)){
+tr.condition.right.literal.println();
+(tr.condition.left.ref.name+"="+tr.condition.right.literal.name).println();
+pre_string=pre_string+" \\<and> "+ tr.condition.left.ref.name+"="+tr.condition.right.literal.name;
+}
+}
+
+//CASE 2: Callexp to return bool condition
+
+if(tr.condition.isTypeOf(CallExp)){
+
+/*
+tr.condition.args.size().println();
+var i=0;
+while(i<tr.condition.args.size()){
+tr.condition.args.at(i).ref.name.println();
+i++;}*/
+pre_string=pre_string+" \\<and> "+ tr.condition.callExpString();
+}
+
+//CASE 3: not condition
+if(tr.condition.isTypeOf(Not)){
+"CHECK".println();
+tr.condition.exp.println();
+
+if(tr.condition.exp.isTypeOf(CallExp)){
+/*
+tr.condition.exp.args.size().println();
+var j=0;
+while(j<tr.condition.exp.args.size()){
+tr.condition.exp.args.at(j).ref.name.println();
+j++;}
+*/
+
+pre_string=pre_string+" \\<and> \\<not>"+tr.condition.exp.callExpString();
+}
+}
+}
+pre_string=pre_string+"\"";
+
+pre_string.println();
+%]
+  [%=pre_string%]
+[%
+
+//////////////////////////////////////////////////////
+//query for the transitions TO generate update section
+//subsection 1:state update
+var target_state_update: String;
+
+//we assume there is always update section in zoperation
+//because we create zoperation according to the transitions
+//the only exception is the Shine operation for the animation purpose
+//if we allow zoperation without update section
+//then we need to add an IF condition on top of the update section
+//if(cond1 and cond2 and cond3) {}
+
+
+
+
+/*
+//these 6 lines have been replaced by operation zmState()
+if(tr.target.isTypeOf(Final)){
+("update \"[ act_st\\<Zprime>= final").println();
+target_state_update="final";}
+else{
+("update \"[ act_st\\<Zprime>="+tr.target.name).println();
+target_state_update=tr.target.name;}
+*/
+target_state_update=tr.target.zmState();
+"target_state_update".println();
+target_state_update.println();
+
+%]
+  update "[ act_st\<Zprime>= [%=target_state_update%]
+[%
+//subsection 2:transition action to update, event not considered
+if (tr.action.isDefined() )
+{
+//("tr.action: " + tr.action).println();
+var tr_action_string:String;
+
+//CASE 1: "SeqStatement" means there are MORE THAN ONE action.
+//I should write another section of Code to deal with single action after this if phrase
+//but GasAnalysis example does not need singel action code
+//because single action is event, Simple type or output type
+//these two types are negleted in transformation
+if(tr.action.isTypeOf(SeqStatement)){
+//tr.action.statements.println();
+//"tr.action.statements.size():".println();
+var i=0;
+while(i<tr.action.statements.size())
+{
+
+//here I only consider the assignment action
+//so there is only one condition on the top as if(tr.action.statements.at(i).isTypeOf(Assignment)),
+//and  no "else if" followed
+//if the use case has other type of action that needs transformation
+//I will add a new IF section after this IF 
+if(tr.action.statements.at(i).isTypeOf(Assignment)){
+//"left type:".println();
+
+//tr.action.statements.at(i).left.type().println();
+//"left type:".println();
+//tr.action.statements.at(i).right.type().println();
+"tr.action.assignment left.name.name: ".println();
+tr.action.statements.at(i).left.name.name.println();
+
+
+//In GasAnalysis there are 3 different assignment in the transition actions
+//The left is always the same: type is VarRef, the query code is left.name.name
+//but for the assignment.right we now have 3 types:
+//SeqExp, EnumExp, CallExp
+// so we need three IF to cover these 3 different types
+//if there are new types later on, we need to add more
+
+//CASE 1: right = CallExp
+if(tr.action.statements.at(i).right.isTypeOf(CallExp)){
+var callExp_string: String;
+
+callExp_string= tr.action.statements.at(i).right.callExpString();
+//"callExp_string:".println();
+//callExp_string.println();
+
+tr_action_string=", "+tr.action.statements.at(i).left.name.name+"\\<Zprime> = "+callExp_string;
+
+
+/*
+//this section has been replaced by callExpString()
+************************************************************
+var args_string: String;
+//to get the parameter on the right
+args_string= tr.action.statements.at(i).right.args.at(0).ref.name;
+
+//for the case that more than 2 args, we need insert ',' between args
+var j=1;
+while(j<tr.action.statements.at(i).right.args.size()){
+tr.action.statements.at(i).right.args.at(j).ref.name.println();
+arg_string=args_string+ ", "+ tr.action.statements.at(i).right.args.at(j).ref.name;
+j++;
+}
+//"tr.action.assignment right args_string: ".println();
+//args_string.println();
+//"right.`function`.ref.name".println();
+//tr.action.statements.at(i).right.`function`.ref.name.println();
+callExp_string=tr.action.statements.at(i).right.`function`.ref.name+"("+args_string+")";
+*******************************************************************
+*/
+}
+//CASE 2: right = SeqExp
+//for this type, ONE MORE thing: need to convert to list in ZMachine
+else if(tr.action.statements.at(i).right.isTypeOf(SeqExp)){
+//"right SeqExp: ".println();
+//tr.action.statements.at(i).right.values.println();
+//"right SeqExp size: ".println();
+//tr.action.statements.at(i).right.values.size().println();
+if(tr.action.statements.at(i).right.values.size()=0){
+//"right SeqExp output converted to list: ".println();
+"[]".println();
+tr_action_string=", "+tr.action.statements.at(i).left.name.name+"\\<Zprime> = []";
+} else if(tr.action.statements.at(i).right.values.size()>0)
+{
+var m=1;
+var tr_action_right_list="["+tr.action.statements.at(i).right.values.at(0);
+while (m<tr.action.statements.at(i).right.values.size()){
+tr_action_right_list=tr_action_right_list+", "+tr.action.statements.at(i).right.values.at(m);
+m++;
+}
+tr_action_right_list=tr_action_right_list+"]";
+tr_action_string=", "+tr.action.statements.at(i).left.name.name+"\\<Zprime> = "+tr_action_right_list;
+}
+}
+//CASE 3: right = EnumExp
+else if(tr.action.statements.at(i).right.isTypeOf(EnumExp)){
+"right EnumExp: ".println();
+tr.action.statements.at(i).right.type.name.println();
+tr.action.statements.at(i).right.literal.name.println();
+tr_action_string=", "+tr.action.statements.at(i).left.name.name+"\\<Zprime> = "+tr.action.statements.at(i).right.literal.name;
+}
+
+%]
+         [%=tr_action_string%]
+[%
+}
+
+
+i++;
+}
+"tr.action.statements.at(0)".println();
+tr.action.statements.at(0).println();
+"tr.action.statements.at(1):".println();
+tr.action.statements.at(1).println();
+
+}
+
+//TO DO
+//CASE 2: single action in tr.actions
+//in GA use case, the single action is the type of CommunicationStmt
+//all are events,
+//so I ignore it for the moment
+// if new use case needs this single action case, I will add a new IF section here
+//if(tr.action.isTypeOf(CommunicationStmt)){}
+//but the type may not be CommunicationStmt
+}
+
+
+/////////////////////////////////////////////////////////////////////
+//query for the target state enter action TO generate update section
+//TO DO
+//currently, only cover the types of actions used in GasAnalysis
+//i.e. the assignment with right=callexp
+//I need to generate an operation for tr.action and tr.target.action
+//to cover as many types as possible and to simplify the codes
+//in this version, tr.action has more types than tr.target.aciton
+
+// we can not use if(tr.target.actions.isDefined()), it returns True no matter there is state actions or not.
+if(tr.target.actions.notEmpty()and tr.target.actions.at(0).isTypeOf(EntryAction) ){
+
+("tr.target.actions.size:" +tr.target.actions.size()).println();
+("tr.target.actions:" +tr.target.actions.at(0)).println();
+//tr.target.actions.at(0).isTypeOf(Assignment).println();
+//tr.target.actions.at(0).isTypeOf(Statement).println();
+//tr.target.actions.at(0).isTypeOf(Action).println();
+tr.target.actions.at(0).type().println();
+tr.target.actions.at(0).action.println();
+var target_action_string: String;
+if(tr.target.actions.at(0).action.isTypeOf(Assignment)){
+//to get the left parameter
+tr.target.actions.at(0).action.left.name.name.println();
+tr.target.actions.at(0).action.right.args.size().println();
+var args_string: String;
+//to get the parameter on the right
+args_string= tr.target.actions.at(0).action.right.args.at(0).ref.name;
+
+//for the case that more than 2 args, we need insert ',' between args
+var i=1;
+while(i<tr.target.actions.at(0).action.right.args.size()){
+tr.target.actions.at(0).action.right.args.at(i).ref.name.println();
+arg_string=args_string+ ", "+ tr.target.actions.at(0).action.right.args.at(i).ref.name;
+i++;
+}
+args_string.println();
+//"CHECKCHECKCHECKCHECKCHECKCHECK".println();
+//tr.target.actions.at(0).action.right.`function`.println();
+tr.target.actions.at(0).action.right.`function`.ref.name.println();
+target_action_string=tr.target.actions.at(0).action.left.name.name+"\\<Zprime> ="+tr.target.actions.at(0).action.right.`function`.ref.name+"("+args_string +")";
+}%]
+          ,[%=target_action_string%]
+[%}%]
+          ]"
+        
+[%
+//'}' in the line below is the close end of transition for loop
+}
+%]
+zoperation Shine =
+  over [%=stm_name%]
+  params s\<in>"{act_st}"
+  
+definition Init :: "GasAnalysis subst" where
+  [z_defs]:
+  "Init = 
+  [
+ st\<leadsto> noGas,
+  gs \<leadsto> [],
+  ins\<leadsto> 0,
+  anl\<leadsto> Front,
+  act_st\<leadsto> initial
+  ]"
+  
+zmachine [%=stm_name%]Machine =
+  init initial
+  operations [%=zoperations_string%]
+
+animate [%=stm_name%]Machine
+
+
+subsection \<open> Structural Invariants \<close>
+
+lemma Init_inv: "initial establishes [%=stm_name%]_inv"
+  by zpog_full
+
+[%
+var n=0;
+while (n<zoperations_set.size())
+{
+if(zoperations_set.at(n)!="initial"){
+%]
+lemma [%=zoperations_set.at(n)%]_inv: "[%=zoperations_set.at(n)%] preserves [%=stm_name%]_inv"
+  by (zpog_full; auto)
+  
+[%}
+n++;
+}
+%]
+
+[%
+// '}' in the line below is the close end of package scope: if (p.name="Chemical")
+}
+}
+
+%]
+end
+
+[*convert initial state name from i1 to initial, final j1 to final*]
+[%
+operation RC!Node zmState(): String{
+  if(self.isTypeOf(Initial)){
+  return "initial";
+  } else if(self.isTypeOf(Final)){
+    return "final";
+  } else{
+  return self.name;
+  }
+  }%]
+  
+
+[*convert initial state name from i1 to Initial, final j1 to Final*]
+[%
+operation RC!Node zmStateCapt(): String{
+  if(self.isTypeOf(Initial)){
+  return "Initial";
+  } else if(self.isTypeOf(Final)){
+    return "Final";
+  } else{
+  return self.name;
+  }
+  }%]
+  
+  
+[*convert boolean type to bool type*]
+[%
+operation RC!Type zmType(): String{
+  if(self.ref.name="boolean"){
+  return "bool";
+  } else{
+  return self.ref.name;
+  }
+  }%]
+  
+  
+[*to generate the Call expression string for the statement of CallExp type*]
+[% 
+operation RC!CallExp callExpString(): String{
+var args_string: String;
+var callExp_string: String;
+//to get the parameter on the right
+args_string= self.args.at(0).ref.name;
+
+//for the case that there are more than 2 args, we need insert ',' between args
+var j=1;
+while(j<self.args.size()){
+//self.args.at(j).ref.name.println();
+args_string=args_string+ ", "+ self.args.at(j).ref.name;
+j++;
+}
+
+
+//"tr.action.assignment right args_string: ".println();
+//args_string.println();
+//"right.`function`.ref.name".println();
+//self.`function`.ref.name.println();
+callExp_string=self.`function`.ref.name+"("+args_string+")";
+return callExp_string;
+  }
+  %]

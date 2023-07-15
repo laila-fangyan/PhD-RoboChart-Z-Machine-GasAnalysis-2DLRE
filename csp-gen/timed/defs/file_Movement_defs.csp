@@ -1,0 +1,11 @@
+-- data definitions used by platform:/resource/ChemicalDetector-autonomous8_use_case_R2/Movement.rct
+datatype Loc = Loc_left | Loc_right | Loc_front
+Loc_is(Loc_left,Loc_left) = true
+Loc_is(_,Loc_left) = false
+Loc_is(Loc_right,Loc_right) = true
+Loc_is(_,Loc_right) = false
+Loc_is(Loc_front,Loc_front) = true
+Loc_is(_,Loc_front) = false
+
+
+	

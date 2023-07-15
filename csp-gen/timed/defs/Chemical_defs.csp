@@ -1,0 +1,30 @@
+-- data definitions used by platform:/resource/ChemicalDetector-autonomous8_use_case_R2/theory%20generation%20for%20Z%20machine%20R2%202022.7.30/Chemical_function_completed.rct
+datatype Chemical_Status = Chemical_Status_noGas | Chemical_Status_gasD
+Chemical_Status_is(Chemical_Status_noGas,Chemical_Status_noGas) = true
+Chemical_Status_is(_,Chemical_Status_noGas) = false
+Chemical_Status_is(Chemical_Status_gasD,Chemical_Status_gasD) = true
+Chemical_Status_is(_,Chemical_Status_gasD) = false
+
+datatype Chemical_Angle = Chemical_Angle_Left | Chemical_Angle_Right | Chemical_Angle_Back | Chemical_Angle_Front
+Chemical_Angle_is(Chemical_Angle_Left,Chemical_Angle_Left) = true
+Chemical_Angle_is(_,Chemical_Angle_Left) = false
+Chemical_Angle_is(Chemical_Angle_Right,Chemical_Angle_Right) = true
+Chemical_Angle_is(_,Chemical_Angle_Right) = false
+Chemical_Angle_is(Chemical_Angle_Back,Chemical_Angle_Back) = true
+Chemical_Angle_is(_,Chemical_Angle_Back) = false
+Chemical_Angle_is(Chemical_Angle_Front,Chemical_Angle_Front) = true
+Chemical_Angle_is(_,Chemical_Angle_Front) = false
+
+nametype Chemical_GasSensor = (Chemical_Chem,Chemical_Intensity)
+Chemical_GasSensor_c((c,i)) = c
+update_Chemical_GasSensor_c((c,i),v__) = (v__,i)
+Chemical_GasSensor_i((c,i)) = i
+update_Chemical_GasSensor_i((c,i),v__) = (c,v__)
+
+pre_Chemical_analysis(gs) =  (length(gs)>0)
+pre_Chemical_goreq(i1,i2) = true
+pre_Chemical_intensity(gs) =  (length(gs)>0)
+pre_Chemical_location(gs) =  (length(gs)>0)
+pre_Chemical_angle(x) = true
+pre_Chemical_card(A) = true
+	

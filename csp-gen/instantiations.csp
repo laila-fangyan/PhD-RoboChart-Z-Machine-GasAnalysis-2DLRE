@@ -1,0 +1,217 @@
+-- generate move_BOUND
+move_BOUND = 2
+
+-- generate lre_beh_CDA
+lre_beh_CDA(p,obs,v) = 0
+
+-- generate const_MicroController_stm_ref0_evadeTime
+const_MicroController_stm_ref0_evadeTime = 0
+
+-- generate const_lre_beh_LRE_Beh_StaticObsDfltVertDist
+const_lre_beh_LRE_Beh_StaticObsDfltVertDist = 0
+
+-- generate const_lre_beh_LRE_Beh_ODA_Obs
+const_lre_beh_LRE_Beh_ODA_Obs = 0
+
+-- generate const_lre_beh_LRE_Beh_StaticObsHorizDist
+const_lre_beh_LRE_Beh_StaticObsHorizDist = 0
+
+-- generate const_Chemical_Movement_lv
+const_Chemical_Movement_lv = 0
+
+-- generate const_Chemical_changeDirection_lv
+const_Chemical_changeDirection_lv = 0
+
+-- generate const_Chemical_Movement_evadeTime
+const_Chemical_Movement_evadeTime = 0
+
+-- generate Plus
+Plus(e1,e2,T) = if member(e1+e2,T) then e1+e2 else e1
+
+-- generate lre_beh_setVel
+lre_beh_setVel(v,setpoint) = (0,0)
+
+-- generate const_GasAnalysis_thr
+const_GasAnalysis_thr = 0
+
+-- generate --
+
+-- MODULE CONSTANTS
+
+-- CONTROLLER CONSTANTS
+
+-- STATEMACHINE CONSTANTS
+
+-- generate nat
+nametype core_nat = {0..2}
+
+-- generate const_lre_beh_LRE_Beh_MOMVel
+const_lre_beh_LRE_Beh_MOMVel = 0
+
+-- generate shortRandomWalk_BOUND
+shortRandomWalk_BOUND = 2
+
+-- generate const_changeDirection_lv
+const_changeDirection_lv = 0
+
+-- BASIC TYPES
+
+-- generate Intensity
+nametype Chemical_Intensity = {0,1}
+
+-- generate const_lre_beh_LRE_Beh_AvoidanceMargin
+const_lre_beh_LRE_Beh_AvoidanceMargin = 0
+
+-- generate const_Chemical_Movement_stuckPeriod
+const_Chemical_Movement_stuckPeriod = 0
+
+-- generate const_Movement_stuckPeriod
+const_Movement_stuckPeriod = 0
+
+-- generate const_MicroController_stm_ref0_outPeriod
+const_MicroController_stm_ref0_outPeriod = 0
+
+-- OPERATION CONSTANTS
+
+-- generate real
+nametype core_real = { -2..2}
+
+-- BASIC FUNCTIONS
+
+-- generate Chemical_goreq
+Chemical_goreq(i1,i2) = true
+
+-- generate const_Movement_outPeriod
+const_Movement_outPeriod = 0
+
+-- generate Chemical_move_BOUND
+Chemical_move_BOUND = 2
+
+-- MODULE CONSTANTS
+
+-- CONTROLLER CONSTANTS
+
+-- STATEMACHINE CONSTANTS
+
+-- generate const_lre_beh_LRE_Beh_HCMVel
+const_lre_beh_LRE_Beh_HCMVel = 0
+
+-- generate const_lre_beh_LRE_Beh_StaticObsVertDist
+const_lre_beh_LRE_Beh_StaticObsVertDist = 0
+
+-- generate Modulus
+Modulus(e1,e2,T) = if member(e1%e2,T) then e1%e2 else e1
+
+-- generate lre_beh_maneuv
+lre_beh_maneuv(v) = (0,0)
+
+-- generate const_Movement_stuckDist
+const_Movement_stuckDist = 0
+
+-- generate const_lre_beh_LRE_Beh_StaticObsDist
+const_lre_beh_LRE_Beh_StaticObsDist = 0
+
+-- generate const_MicroController_stm_ref0_stuckDist
+const_MicroController_stm_ref0_stuckDist = 0
+
+-- generate Minus
+Minus(e1,e2,T) = if member(e1-e2,T) then e1-e2 else e1
+
+-- generate Chemical_shortRandomWalk_BOUND
+Chemical_shortRandomWalk_BOUND = 2
+
+-- generate lre_beh_hdist
+lre_beh_hdist(o) = 0
+
+-- generate const_Chemical_Movement_outPeriod
+const_Chemical_Movement_outPeriod = 0
+
+-- generate const_Location_changeDirection_lv
+const_Location_changeDirection_lv = 0
+
+-- generate string
+nametype core_string = LSeq(Char,2)
+
+-- generate const_MicroController_stm_ref0_lv
+const_MicroController_stm_ref0_lv = 0
+
+-- generate const_Movement_evadeTime
+const_Movement_evadeTime = 0
+
+-- generate Chem
+nametype Chemical_Chem = {0,1}
+
+-- generate -- OPERATION BOUNDS
+
+-- generate lre_beh_inOPEZ
+lre_beh_inOPEZ(p) = true
+
+-- generate const_lre_beh_LRE_Beh_ODA_AUV
+const_lre_beh_LRE_Beh_ODA_AUV = 0
+
+-- generate lre_beh_dist
+lre_beh_dist(p,obs) = 0
+
+-- generate const_Movement_lv
+const_Movement_lv = 0
+
+-- generate const_lre_beh_LRE_Beh_MinSafeDist
+const_lre_beh_LRE_Beh_MinSafeDist = 0
+
+-- generate const_Chemical_Movement_stuckDist
+const_Chemical_Movement_stuckDist = 0
+
+-- generate Chemical_location
+Chemical_location(gs) = Chemical_Angle_Left
+
+-- generate const_lre_beh_LRE_Beh_LRETemporalHorizon
+const_lre_beh_LRE_Beh_LRETemporalHorizon = 0
+
+-- generate Chemical_analysis
+Chemical_analysis(gs) = Chemical_Status_noGas
+
+-- generate Chemical_angle
+Chemical_angle(x) = Chemical_Angle_Left
+
+-- generate lre_beh_odist
+lre_beh_odist(o) = 0
+
+-- generate int
+nametype core_int = { -2..2}
+
+-- generate Div
+Div(e1,e2,T) = if member(e1/e2,T) then e1/e2 else e1
+
+-- generate const_MainController_stm_ref0_thr
+const_MainController_stm_ref0_thr = 0
+
+-- generate Neg
+Neg(e1,T) = if member(-e1,T) then -e1 else e1
+
+-- generate Chemical_card
+Chemical_card(A) = 0
+
+-- generate const_Chemical_GasAnalysis_thr
+const_Chemical_GasAnalysis_thr = 0
+
+-- generate const_lre_beh_LRE_Beh_LREHorizon
+const_lre_beh_LRE_Beh_LREHorizon = 0
+
+-- generate boolean
+nametype core_boolean = Bool
+
+-- generate Mult
+Mult(e1,e2,T) = if member(e1*e2,T) then e1*e2 else e1
+
+-- generate const_MicroController_stm_ref0_stuckPeriod
+const_MicroController_stm_ref0_stuckPeriod = 0
+
+-- generate const_lre_beh_LRE_Beh_Obsts
+const_lre_beh_LRE_Beh_Obsts = <>
+
+-- generate lre_beh_vdist
+lre_beh_vdist(o) = 0
+
+-- generate Chemical_intensity
+Chemical_intensity(gs) = 0
+

@@ -1,0 +1,879 @@
+
+
+
+module GasAnalysis
+exports
+	-- flow channels
+	channel internal__ : TIDS
+	channel enteredV, enterV, exitV, exitedV : SIDS
+	channel enter, entered: SIDS.SIDS
+	channel exit,exited: SIDS.SIDS
+	channel terminate
+	
+	-- variable channels
+	channel get_st, set_st: Chemical_Status
+	channel get_gs, set_gs: LSeq(Chemical_GasSensor,2)
+	channel get_ins, set_ins: Chemical_Intensity
+	channel get_anl, set_anl: Chemical_Angle
+			
+	-- shared variable channels
+	
+	-- local variable channels for defined operations that are required by the state machine
+	
+	-- declaring state machine events
+	channel gas__: TIDS.InOut.LSeq(Chemical_GasSensor,2)
+	channel gas: InOut.LSeq(Chemical_GasSensor,2)
+	channel resume__: TIDS.InOut
+	channel resume: InOut
+	channel turn__: TIDS.InOut.Chemical_Angle
+	channel turn: InOut.Chemical_Angle
+	channel stop__: TIDS.InOut
+	channel stop: InOut
+	
+	-- declaring call and ret events for undefined operations
+	
+	-- Only the undefined operations are declared here.
+	-- If the state machine is in isolation, all required operations will be undefined.
+	-- If it is in the context of a controller, the required operations not provided by the
+	-- controller will be declared here, and the defined operations will be defined in the
+	-- context of the Controller module, and therefore within scope of the state machien module.
+	
+	
+	-- definition of functions used to expose flow channels
+	ShowEvents(P,E) = P[[ entered.x____.y____ <- enteredV.y____ | entered.x____.y____ <- E]]
+					   [[ enter.x____.y____ <- enterV.y____ | enter.x____.y____ <- E]]
+					   [[ exit.x____.y____ <- exitV.y____ | exit.x____.y____ <- E]]
+					   [[ exited.x____.y____ <- exitedV.y____ | exited.x____.y____ <- E ]]
+						 
+	ShowEnteredV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowEnterV(P) = P[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitV(P) = P[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowExitedV(P) = P[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	ShowV(P) = P[[ entered.x____.y____ <- enteredV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ enter.x____.y____ <- enterV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+				[[ exit.x____.y____ <- exitV.y____ | x____ <- SIDS, y____ <- SIDS]]
+				[[ exited.x____.y____ <- exitedV.y____ | x____ <- SIDS, y____ <- SIDS ]]
+	
+	-- declaring identifiers of state and final states
+	datatype SIDS = SID_GasAnalysis
+	              | SID_GasAnalysis_NoGas
+	              | SID_GasAnalysis_Analysis
+	              | SID_GasAnalysis_GasDetected
+	              | SID_GasAnalysis_j1
+	              | SID_GasAnalysis_Reading
+	
+	-- declaring identifiers of transitions
+	datatype TIDS = NULLTRANSITION__
+	              | TID_GasAnalysis_t1
+	              | TID_GasAnalysis_t2
+	              | TID_GasAnalysis_t3
+	              | TID_GasAnalysis_t4
+	              | TID_GasAnalysis_t8
+	              | TID_GasAnalysis_t9a
+	              | TID_GasAnalysis_t0
+	
+	-- declaring identifiers of transitions that can interupt a state (excludes transitions from junctions)
+	
+	ITIDS = {
+		TID_GasAnalysis_t2,	TID_GasAnalysis_t3,	TID_GasAnalysis_t4,	TID_GasAnalysis_t8,	TID_GasAnalysis_t9a,	TID_GasAnalysis_t0
+	}
+	
+	int_int = {|
+		gas__.TID_GasAnalysis_t2,
+		resume__.TID_GasAnalysis_t2,
+		turn__.TID_GasAnalysis_t2,
+		stop__.TID_GasAnalysis_t2,
+		internal__.TID_GasAnalysis_t2,
+		gas__.TID_GasAnalysis_t3,
+		resume__.TID_GasAnalysis_t3,
+		turn__.TID_GasAnalysis_t3,
+		stop__.TID_GasAnalysis_t3,
+		internal__.TID_GasAnalysis_t3,
+		gas__.TID_GasAnalysis_t4,
+		resume__.TID_GasAnalysis_t4,
+		turn__.TID_GasAnalysis_t4,
+		stop__.TID_GasAnalysis_t4,
+		internal__.TID_GasAnalysis_t4,
+		gas__.TID_GasAnalysis_t8,
+		resume__.TID_GasAnalysis_t8,
+		turn__.TID_GasAnalysis_t8,
+		stop__.TID_GasAnalysis_t8,
+		internal__.TID_GasAnalysis_t8,
+		gas__.TID_GasAnalysis_t9a,
+		resume__.TID_GasAnalysis_t9a,
+		turn__.TID_GasAnalysis_t9a,
+		stop__.TID_GasAnalysis_t9a,
+		internal__.TID_GasAnalysis_t9a,
+		gas__.TID_GasAnalysis_t0,
+		resume__.TID_GasAnalysis_t0,
+		turn__.TID_GasAnalysis_t0,
+		stop__.TID_GasAnalysis_t0,
+		internal__.TID_GasAnalysis_t0
+	|}
+		
+	
+	internal_events = {|enter,entered,exit,exited|}
+	shared_variable_events = {|
+	|}
+			
+	
+	-- declaring all states
+	CS_GasAnalysis_NoGas_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,SID_GasAnalysis_j1,SID_GasAnalysis_Reading},
+		y____ <- {SID_GasAnalysis_NoGas}
+	|}
+	
+	
+	GasAnalysis_NoGas_triggers = {|
+		internal__.TID_GasAnalysis_t4,
+		gas__.TID_GasAnalysis_t0,
+		internal__.TID_GasAnalysis_t3,
+		internal__.TID_GasAnalysis_t8,
+		gas__.TID_GasAnalysis_t2,
+		internal__.TID_GasAnalysis_t9a
+	|}
+	
+	State_GasAnalysis_NoGas(id__,
+			    const_GasAnalysis_thr) = let
+		T_GasAnalysis_t2(id__,
+				    const_GasAnalysis_thr) = gas__!TID_GasAnalysis_t2.in?gs -> set_gs!gs ->  (exit.SID_GasAnalysis_NoGas.SID_GasAnalysis_NoGas -> SKIP;
+							SKIP;exited.SID_GasAnalysis_NoGas.SID_GasAnalysis_NoGas -> SKIP;
+							enter!SID_GasAnalysis_NoGas!SID_GasAnalysis_Analysis -> entered!SID_GasAnalysis_NoGas!SID_GasAnalysis_Analysis ->
+							State_GasAnalysis_NoGas(id__,
+									    const_GasAnalysis_thr)
+		)
+		State_GasAnalysis_NoGas_execute(id__,o____) = SKIP; 
+			entered!o____!SID_GasAnalysis_NoGas ->
+			(SKIP; STOP /\ (
+				T_GasAnalysis_t2(id__,
+						    const_GasAnalysis_thr)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a}) -> exit?y____:diff(SIDS,{SID_GasAnalysis_NoGas})!SID_GasAnalysis_NoGas -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_NoGas -> SKIP);
+						State_GasAnalysis_NoGas(id__,
+								    const_GasAnalysis_thr)
+				[] gas__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_NoGas})!SID_GasAnalysis_NoGas -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_NoGas -> SKIP);
+						State_GasAnalysis_NoGas(id__,
+								    const_GasAnalysis_thr)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_NoGas})!SID_GasAnalysis_NoGas -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_NoGas -> SKIP);
+						State_GasAnalysis_NoGas(id__,
+								    const_GasAnalysis_thr)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_NoGas})!SID_GasAnalysis_NoGas -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_NoGas -> SKIP);
+						State_GasAnalysis_NoGas(id__,
+								    const_GasAnalysis_thr)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_NoGas})!SID_GasAnalysis_NoGas -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_NoGas -> SKIP);
+						State_GasAnalysis_NoGas(id__,
+								    const_GasAnalysis_thr)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_GasAnalysis_NoGas})!SID_GasAnalysis_NoGas -> (State_GasAnalysis_NoGas_execute(id__,x____))
+	
+	CS_GasAnalysis_Analysis_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,SID_GasAnalysis_j1,SID_GasAnalysis_Reading},
+		y____ <- {SID_GasAnalysis_Analysis}
+	|}
+	
+	
+	GasAnalysis_Analysis_triggers = {|
+		internal__.TID_GasAnalysis_t4,
+		gas__.TID_GasAnalysis_t0,
+		internal__.TID_GasAnalysis_t3,
+		internal__.TID_GasAnalysis_t8,
+		gas__.TID_GasAnalysis_t2,
+		internal__.TID_GasAnalysis_t9a
+	|}
+	
+	State_GasAnalysis_Analysis(id__,
+			    const_GasAnalysis_thr) = let
+		T_GasAnalysis_t3(id__,
+				    const_GasAnalysis_thr) = internal__!TID_GasAnalysis_t3 ->  exit.SID_GasAnalysis_Analysis.SID_GasAnalysis_Analysis -> SKIP;
+							SKIP;exited.SID_GasAnalysis_Analysis.SID_GasAnalysis_Analysis -> SKIP;
+							true&(resume.out -> SKIP);enter!SID_GasAnalysis_Analysis!SID_GasAnalysis_NoGas -> entered!SID_GasAnalysis_Analysis!SID_GasAnalysis_NoGas ->
+							State_GasAnalysis_Analysis(id__,
+									    const_GasAnalysis_thr)
+		T_GasAnalysis_t4(id__,
+				    const_GasAnalysis_thr) = internal__!TID_GasAnalysis_t4 ->  exit.SID_GasAnalysis_Analysis.SID_GasAnalysis_Analysis -> SKIP;
+							SKIP;exited.SID_GasAnalysis_Analysis.SID_GasAnalysis_Analysis -> SKIP;
+							enter!SID_GasAnalysis_Analysis!SID_GasAnalysis_GasDetected -> entered!SID_GasAnalysis_Analysis!SID_GasAnalysis_GasDetected ->
+							State_GasAnalysis_Analysis(id__,
+									    const_GasAnalysis_thr)
+		State_GasAnalysis_Analysis_execute(id__,o____) = get_gs?gs -> pre_Chemical_analysis(gs) & (set_st!Chemical_analysis(gs) -> SKIP); 
+			entered!o____!SID_GasAnalysis_Analysis ->
+			(SKIP; STOP /\ (
+				T_GasAnalysis_t3(id__,
+						    const_GasAnalysis_thr)[]
+				T_GasAnalysis_t4(id__,
+						    const_GasAnalysis_thr)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a}) -> exit?y____:diff(SIDS,{SID_GasAnalysis_Analysis})!SID_GasAnalysis_Analysis -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Analysis -> SKIP);
+						State_GasAnalysis_Analysis(id__,
+								    const_GasAnalysis_thr)
+				[] gas__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Analysis})!SID_GasAnalysis_Analysis -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Analysis -> SKIP);
+						State_GasAnalysis_Analysis(id__,
+								    const_GasAnalysis_thr)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Analysis})!SID_GasAnalysis_Analysis -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Analysis -> SKIP);
+						State_GasAnalysis_Analysis(id__,
+								    const_GasAnalysis_thr)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Analysis})!SID_GasAnalysis_Analysis -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Analysis -> SKIP);
+						State_GasAnalysis_Analysis(id__,
+								    const_GasAnalysis_thr)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Analysis})!SID_GasAnalysis_Analysis -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Analysis -> SKIP);
+						State_GasAnalysis_Analysis(id__,
+								    const_GasAnalysis_thr)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_GasAnalysis_Analysis})!SID_GasAnalysis_Analysis -> (State_GasAnalysis_Analysis_execute(id__,x____))
+	
+	CS_GasAnalysis_GasDetected_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,SID_GasAnalysis_j1,SID_GasAnalysis_Reading},
+		y____ <- {SID_GasAnalysis_GasDetected}
+	|}
+	
+	
+	GasAnalysis_GasDetected_triggers = {|
+		internal__.TID_GasAnalysis_t4,
+		gas__.TID_GasAnalysis_t0,
+		internal__.TID_GasAnalysis_t3,
+		internal__.TID_GasAnalysis_t8,
+		gas__.TID_GasAnalysis_t2,
+		internal__.TID_GasAnalysis_t9a
+	|}
+	
+	State_GasAnalysis_GasDetected(id__,
+			    const_GasAnalysis_thr) = let
+		T_GasAnalysis_t8(id__,
+				    const_GasAnalysis_thr) = internal__!TID_GasAnalysis_t8 ->  exit.SID_GasAnalysis_GasDetected.SID_GasAnalysis_GasDetected -> SKIP;
+							SKIP;exited.SID_GasAnalysis_GasDetected.SID_GasAnalysis_GasDetected -> SKIP;
+							true&(stop.out -> SKIP);enter!SID_GasAnalysis_GasDetected!SID_GasAnalysis_j1 -> entered!SID_GasAnalysis_GasDetected!SID_GasAnalysis_j1 ->
+							State_GasAnalysis_GasDetected(id__,
+									    const_GasAnalysis_thr)
+		T_GasAnalysis_t9a(id__,
+				    const_GasAnalysis_thr) = internal__!TID_GasAnalysis_t9a ->  exit.SID_GasAnalysis_GasDetected.SID_GasAnalysis_GasDetected -> SKIP;
+							SKIP;exited.SID_GasAnalysis_GasDetected.SID_GasAnalysis_GasDetected -> SKIP;
+							get_gs?gs -> pre_Chemical_location(gs) & (set_anl!Chemical_location(gs) -> SKIP);get_anl?anl -> true&(turn.out!anl -> SKIP);enter!SID_GasAnalysis_GasDetected!SID_GasAnalysis_Reading -> entered!SID_GasAnalysis_GasDetected!SID_GasAnalysis_Reading ->
+							State_GasAnalysis_GasDetected(id__,
+									    const_GasAnalysis_thr)
+		State_GasAnalysis_GasDetected_execute(id__,o____) = get_gs?gs -> pre_Chemical_intensity(gs) & (set_ins!Chemical_intensity(gs) -> SKIP); 
+			entered!o____!SID_GasAnalysis_GasDetected ->
+			(SKIP; STOP /\ (
+				T_GasAnalysis_t8(id__,
+						    const_GasAnalysis_thr)[]
+				T_GasAnalysis_t9a(id__,
+						    const_GasAnalysis_thr)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a}) -> exit?y____:diff(SIDS,{SID_GasAnalysis_GasDetected})!SID_GasAnalysis_GasDetected -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_GasDetected -> SKIP);
+						State_GasAnalysis_GasDetected(id__,
+								    const_GasAnalysis_thr)
+				[] gas__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_GasDetected})!SID_GasAnalysis_GasDetected -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_GasDetected -> SKIP);
+						State_GasAnalysis_GasDetected(id__,
+								    const_GasAnalysis_thr)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_GasDetected})!SID_GasAnalysis_GasDetected -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_GasDetected -> SKIP);
+						State_GasAnalysis_GasDetected(id__,
+								    const_GasAnalysis_thr)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_GasDetected})!SID_GasAnalysis_GasDetected -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_GasDetected -> SKIP);
+						State_GasAnalysis_GasDetected(id__,
+								    const_GasAnalysis_thr)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_GasDetected})!SID_GasAnalysis_GasDetected -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_GasDetected -> SKIP);
+						State_GasAnalysis_GasDetected(id__,
+								    const_GasAnalysis_thr)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_GasAnalysis_GasDetected})!SID_GasAnalysis_GasDetected -> (State_GasAnalysis_GasDetected_execute(id__,x____))
+	
+	CS_GasAnalysis_j1_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,SID_GasAnalysis_j1,SID_GasAnalysis_Reading},
+		y____ <- {SID_GasAnalysis_j1}
+	|}
+	
+	
+	GasAnalysis_j1_triggers = {|
+	|}
+	
+	State_GasAnalysis_j1(id__,
+			    const_GasAnalysis_thr) = let
+		State_GasAnalysis_j1_execute(id__,o____) = SKIP; 
+			entered!o____!SID_GasAnalysis_j1 ->
+			terminate -> SKIP
+	within
+		enter?x____:diff(SIDS,{SID_GasAnalysis_j1})!SID_GasAnalysis_j1 -> (State_GasAnalysis_j1_execute(id__,x____))
+	
+	CS_GasAnalysis_Reading_sync = {|
+		enter.y____.x____, 
+		entered.y____.x____, 
+		exit.y____.x____, 
+		exited.y____.x____,
+		enter.x____.y____, 
+		entered.x____.y____, 
+		exit.x____.y____, 
+		exited.x____.y____ |
+		x____ <- {SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,SID_GasAnalysis_j1,SID_GasAnalysis_Reading},
+		y____ <- {SID_GasAnalysis_Reading}
+	|}
+	
+	
+	GasAnalysis_Reading_triggers = {|
+		internal__.TID_GasAnalysis_t4,
+		gas__.TID_GasAnalysis_t0,
+		internal__.TID_GasAnalysis_t3,
+		internal__.TID_GasAnalysis_t8,
+		gas__.TID_GasAnalysis_t2,
+		internal__.TID_GasAnalysis_t9a
+	|}
+	
+	State_GasAnalysis_Reading(id__,
+			    const_GasAnalysis_thr) = let
+		T_GasAnalysis_t0(id__,
+				    const_GasAnalysis_thr) = gas__!TID_GasAnalysis_t0.in?gs -> set_gs!gs ->  (exit.SID_GasAnalysis_Reading.SID_GasAnalysis_Reading -> SKIP;
+							SKIP;exited.SID_GasAnalysis_Reading.SID_GasAnalysis_Reading -> SKIP;
+							enter!SID_GasAnalysis_Reading!SID_GasAnalysis_Analysis -> entered!SID_GasAnalysis_Reading!SID_GasAnalysis_Analysis ->
+							State_GasAnalysis_Reading(id__,
+									    const_GasAnalysis_thr)
+		)
+		State_GasAnalysis_Reading_execute(id__,o____) = SKIP; 
+			entered!o____!SID_GasAnalysis_Reading ->
+			(SKIP; STOP /\ (
+				T_GasAnalysis_t0(id__,
+						    const_GasAnalysis_thr)
+				[]
+				internal__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a}) -> exit?y____:diff(SIDS,{SID_GasAnalysis_Reading})!SID_GasAnalysis_Reading -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Reading -> SKIP);
+						State_GasAnalysis_Reading(id__,
+								    const_GasAnalysis_thr)
+				[] gas__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Reading})!SID_GasAnalysis_Reading -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Reading -> SKIP);
+						State_GasAnalysis_Reading(id__,
+								    const_GasAnalysis_thr)
+				[] resume__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Reading})!SID_GasAnalysis_Reading -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Reading -> SKIP);
+						State_GasAnalysis_Reading(id__,
+								    const_GasAnalysis_thr)
+				[] turn__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____?aux____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Reading})!SID_GasAnalysis_Reading -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Reading -> SKIP);
+						State_GasAnalysis_Reading(id__,
+								    const_GasAnalysis_thr)
+				[] stop__?x____:diff(ITIDS,{NULLTRANSITION__,TID_GasAnalysis_t4,TID_GasAnalysis_t0,TID_GasAnalysis_t3,TID_GasAnalysis_t8,TID_GasAnalysis_t2,TID_GasAnalysis_t9a})?d____ ->	exit?y____:diff(SIDS,{SID_GasAnalysis_Reading})!SID_GasAnalysis_Reading -> (
+						SKIP;
+						exited!y____!SID_GasAnalysis_Reading -> SKIP);
+						State_GasAnalysis_Reading(id__,
+								    const_GasAnalysis_thr)
+			))
+	within
+		enter?x____:diff(SIDS,{SID_GasAnalysis_Reading})!SID_GasAnalysis_Reading -> (State_GasAnalysis_Reading_execute(id__,x____))
+	
+	
+	I_GasAnalysis_i1(id__,
+			    const_GasAnalysis_thr) = let
+		T_GasAnalysis_t1(id__,
+				    const_GasAnalysis_thr) = internal__!TID_GasAnalysis_t1 -> true & (set_gs!<> -> SKIP);true & (set_anl!Chemical_Angle_Front -> SKIP);enter!SID_GasAnalysis!SID_GasAnalysis_NoGas -> entered!SID_GasAnalysis!SID_GasAnalysis_NoGas ->
+		SKIP
+	within
+		T_GasAnalysis_t1(id__,
+				    const_GasAnalysis_thr)
+	
+	
+	State_GasAnalysis_NoGas_R(id__,
+			    const_GasAnalysis_thr) = 
+		State_GasAnalysis_NoGas(id__,
+				    const_GasAnalysis_thr)
+			[|diff(int_int,GasAnalysis_NoGas_triggers)|]
+		SKIP
+			 		
+	State_GasAnalysis_Analysis_R(id__,
+			    const_GasAnalysis_thr) = 
+		State_GasAnalysis_Analysis(id__,
+				    const_GasAnalysis_thr)
+			[|diff(int_int,GasAnalysis_Analysis_triggers)|]
+		SKIP
+			 		
+	State_GasAnalysis_GasDetected_R(id__,
+			    const_GasAnalysis_thr) = 
+		State_GasAnalysis_GasDetected(id__,
+				    const_GasAnalysis_thr)
+			[|diff(int_int,GasAnalysis_GasDetected_triggers)|]
+		SKIP
+			 		
+	State_GasAnalysis_j1_R(id__,
+			    const_GasAnalysis_thr) = 
+		State_GasAnalysis_j1(id__,
+				    const_GasAnalysis_thr)
+			[|diff(int_int,GasAnalysis_j1_triggers)|]
+		SKIP
+			 		
+	State_GasAnalysis_Reading_R(id__,
+			    const_GasAnalysis_thr) = 
+		State_GasAnalysis_Reading(id__,
+				    const_GasAnalysis_thr)
+			[|diff(int_int,GasAnalysis_Reading_triggers)|]
+		SKIP
+			 		
+		
+	STM(id__,
+			    const_GasAnalysis_thr) = (
+		I_GasAnalysis_i1(id__,
+				    const_GasAnalysis_thr)
+			[|
+				{|enter.x____.y____, entered.x____.y____, exit.x____.y____, exited.x____.y____ |
+					x____ <- diff(SIDS,{SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,SID_GasAnalysis_j1,SID_GasAnalysis_Reading}),
+					y____ <- {SID_GasAnalysis_NoGas,SID_GasAnalysis_Analysis,SID_GasAnalysis_GasDetected,SID_GasAnalysis_j1,SID_GasAnalysis_Reading}
+			|}|]
+		(
+			State_GasAnalysis_NoGas_R(id__,
+					    const_GasAnalysis_thr)
+				[|inter(CS_GasAnalysis_NoGas_sync,union(union(union(CS_GasAnalysis_Analysis_sync,CS_GasAnalysis_GasDetected_sync),CS_GasAnalysis_j1_sync),CS_GasAnalysis_Reading_sync))|]
+			(
+				State_GasAnalysis_Analysis_R(id__,
+						    const_GasAnalysis_thr)
+					[|inter(CS_GasAnalysis_Analysis_sync,union(union(CS_GasAnalysis_GasDetected_sync,CS_GasAnalysis_j1_sync),CS_GasAnalysis_Reading_sync))|]
+				(
+					State_GasAnalysis_GasDetected_R(id__,
+							    const_GasAnalysis_thr)
+						[|inter(CS_GasAnalysis_GasDetected_sync,union(CS_GasAnalysis_j1_sync,CS_GasAnalysis_Reading_sync))|]
+					(
+						State_GasAnalysis_j1_R(id__,
+								    const_GasAnalysis_thr)
+							[|inter(CS_GasAnalysis_j1_sync,CS_GasAnalysis_Reading_sync)|]
+						State_GasAnalysis_Reading_R(id__,
+								    const_GasAnalysis_thr)
+					)
+				)
+			)
+		)
+	)
+	
+	-- optimized memory process
+	channel getV_st: Chemical_Status
+	channel getV_gs: LSeq(Chemical_GasSensor,2)
+	channel getV_ins: Chemical_Intensity
+	channel getV_anl: Chemical_Angle
+	
+	-- individual memory processes
+	Memory_st(st) = (
+		get_st!st -> Memory_st(st)
+		[]
+		getV_st!st -> Memory_st(st)
+		[]
+		set_st?x__ -> Memory_st(x__)
+	)
+	Memory_gs(gs) = (
+		get_gs!gs -> Memory_gs(gs)
+		[]
+		getV_gs!gs -> Memory_gs(gs)
+		[]
+		set_gs?x__ -> Memory_gs(x__)
+		[]
+		gas__!TID_GasAnalysis_t2.in?gs -> Memory_gs(gs)
+		[]
+		gas__!TID_GasAnalysis_t0.in?gs -> Memory_gs(gs)
+	)
+	Memory_ins(ins) = (
+		get_ins!ins -> Memory_ins(ins)
+		[]
+		getV_ins!ins -> Memory_ins(ins)
+		[]
+		set_ins?x__ -> Memory_ins(x__)
+	)
+	Memory_anl(anl) = (
+		get_anl!anl -> Memory_anl(anl)
+		[]
+		getV_anl!anl -> Memory_anl(anl)
+		[]
+		set_anl?x__ -> Memory_anl(x__)
+	)
+	
+	-- processes that read variables and offer transitions
+	MemoryTransitions(id__, st
+				, gs
+				, ins
+				, anl
+				,
+			    const_GasAnalysis_thr) = 		
+	(internal__!TID_GasAnalysis_t1 -> SKIP
+	[]
+	gas__!TID_GasAnalysis_t2.in?gs -> SKIP
+	[]
+	((st==Chemical_Status_noGas))&(internal__!TID_GasAnalysis_t3 -> SKIP)
+	[]
+	((st==Chemical_Status_gasD))&(internal__!TID_GasAnalysis_t4 -> SKIP)
+	[]
+	(Chemical_goreq(ins,const_GasAnalysis_thr))&(internal__!TID_GasAnalysis_t8 -> SKIP)
+	[]
+	((not (Chemical_goreq(ins,const_GasAnalysis_thr))))&(internal__!TID_GasAnalysis_t9a -> SKIP)
+	[]
+	gas__!TID_GasAnalysis_t0.in?gs -> SKIP[]
+	set_st?x__ -> SKIP[]
+	set_gs?x__ -> SKIP[]
+	set_ins?x__ -> SKIP[]
+	set_anl?x__ -> SKIP)
+	
+	MemoryTransitions_GasAnalysis(id__, const_GasAnalysis_thr) = (getV_st?st ->
+	getV_gs?gs ->
+	getV_ins?ins ->
+	getV_anl?anl ->
+	MemoryTransitions(id__, st
+				, gs
+				, ins
+				, anl
+				,
+			    const_GasAnalysis_thr); MemoryTransitions_GasAnalysis(id__, const_GasAnalysis_thr))			
+	
+	-- synchronisation, hiding and process sets 
+	MemoryVariablesProcesses_GasAnalysis = Union(
+		{
+			{
+				(Memory_st(Chemical_Status_noGas),{|get_st,getV_st,set_st|}),
+				(Memory_gs(<>),{|set_gs,gas__.TID_GasAnalysis_t2,get_gs,getV_gs,gas__.TID_GasAnalysis_t0|}),
+				(Memory_ins(0),{|set_ins,getV_ins,get_ins|}),
+				(Memory_anl(Chemical_Angle_Left),{|set_anl,getV_anl,get_anl|})
+			}
+		}
+	)
+	
+	MemoryVariablesSyncSet = Union({
+		{|
+			set_ins,
+			getV_st,
+			getV_ins,
+			set_anl,
+			getV_anl,
+			set_gs,
+			gas__.TID_GasAnalysis_t2,
+			set_st,
+			getV_gs,
+			gas__.TID_GasAnalysis_t0
+		|}	
+	})
+	
+	MemoryVariablesHideSet = Union({
+		{|
+			getV_st,
+			getV_ins,
+			getV_anl,
+			getV_gs
+		|}
+	})
+	
+	-- combined individual memory processes
+	MemoryVariables = ||| (P, alpha) : MemoryVariablesProcesses_GasAnalysis @ P
+	
+	-- complete memory process	
+	MemoryN(id__, const_GasAnalysis_thr) = sbisim(diamond((sbisim(diamond(MemoryVariables)) [| MemoryVariablesSyncSet |] sbisim(diamond(MemoryTransitions_GasAnalysis(id__, const_GasAnalysis_thr)))) \ MemoryVariablesHideSet))
+	
+	-- optimised memory
+	-- Sets of named elements identified according to transition conditions:
+	-- {}
+	-- {st}
+	-- {thr,ins}
+	-- Summary of all identified named elements:
+	-- {
+	-- st
+	-- gs
+	-- anl
+	-- thr
+	-- ins
+	-- }
+	
+	-- Allocation plan:
+	-- 0:{}
+	--	=> {
+	--		TID_GasAnalysis_t1,
+	--		TID_GasAnalysis_t0,
+	--		TID_GasAnalysis_t2}
+	-- 1:{st}
+	--	=> {
+	--		TID_GasAnalysis_t4,
+	--		TID_GasAnalysis_t3}
+	-- 2:{thr,ins}
+	--	=> {
+	--		TID_GasAnalysis_t8,
+	--		TID_GasAnalysis_t9a}
+	
+	-- Memory transition processes
+	MemoryTransitions_opt_0(id__) =
+	(
+		let
+			Update = Current(id__)
+			Current(id__)
+			 	   = 
+			 	   internal__!TID_GasAnalysis_t1 -> Update
+			 	   []
+			 	   gas__!TID_GasAnalysis_t0.in?gs -> Update
+			 	   []
+			 	   gas__!TID_GasAnalysis_t2.in?gs -> Update
+		within
+			Update
+	)
+	MemoryTransitions_opt_1(id__) =
+	(
+		let
+			Update = 
+			get_st?st ->
+			Current(id__,
+				 st)
+			Current(id__,
+				 st)
+			 	   = 
+			 	   ((st==Chemical_Status_gasD))&(internal__!TID_GasAnalysis_t4 -> Update)
+			 	   []
+			 	   ((st==Chemical_Status_noGas))&(internal__!TID_GasAnalysis_t3 -> Update)
+			 	   	 
+			 	   	 []
+			 	   	 set_st?x__ -> Update
+		within
+			Update
+	)
+	MemoryTransitions_opt_2(id__,
+		 const_GasAnalysis_thr) =
+	(
+		let
+			Update = 
+			get_ins?ins ->
+			Current(id__,
+				 ins)
+			Current(id__,
+				 ins)
+			 	   = 
+			 	   (Chemical_goreq(ins,const_GasAnalysis_thr))&(internal__!TID_GasAnalysis_t8 -> Update)
+			 	   []
+			 	   ((not (Chemical_goreq(ins,const_GasAnalysis_thr))))&(internal__!TID_GasAnalysis_t9a -> Update)
+			 	   	 
+			 	   	 []
+			 	   	 set_ins?x__ -> Update
+		within
+			Update
+	)
+	
+	-- Memory cell processes
+	Memory_opt_st(x__) = ( 
+		get_st!x__ -> Memory_opt_st(x__)
+		[]
+		set_st?x__ -> Memory_opt_st(x__)
+	)
+	Memory_opt_gs(x__) = ( 
+		get_gs!x__ -> Memory_opt_gs(x__)
+		[]
+		set_gs?x__ -> Memory_opt_gs(x__)
+	)
+	Memory_opt_anl(x__) = ( 
+		get_anl!x__ -> Memory_opt_anl(x__)
+		[]
+		set_anl?x__ -> Memory_opt_anl(x__)
+	)
+	Memory_opt_ins(x__) = ( 
+		get_ins!x__ -> Memory_opt_ins(x__)
+		[]
+		set_ins?x__ -> Memory_opt_ins(x__)
+	)
+	
+	-- Composition of memory, StateMachine and Memory transition processes
+	
+	MemorySTM_opt(id__,
+			    const_GasAnalysis_thr) =
+		dbisim(
+		  sbisim(Memory_opt_st(Chemical_Status_noGas)
+		      	[| {|get_st,set_st|} |] 
+		      	sbisim(	
+		      	  dbisim(
+		      	    sbisim(dbisim(
+		      	      sbisim(Memory_opt_ins(0)
+		      	          	[| {|set_ins,get_ins|} |] 
+		      	          	sbisim(	
+		      	          	  dbisim(
+		      	          	    sbisim(sbisim(	
+		      	          	      dbisim(
+		      	          	        sbisim(dbisim(sbisim(Memory_opt_gs(<>)
+		      	          	              	[| {|set_gs,get_gs|} |] 
+		      	          	              	dbisim(sbisim(Memory_opt_anl(Chemical_Angle_Left)
+		      	          	              	      	[| {|set_anl,get_anl|} |] 
+		      	          	              	      	STM_core(id__,
+		      	          	              	      			    const_GasAnalysis_thr)
+		      	          	              	      	)\ {|set_anl,get_anl|}
+		      	          	              	      )
+		      	          	              	)\ {|set_gs,get_gs|}
+		      	          	              )
+		      	          	          	  [| {|internal__.TID_GasAnalysis_t1,gas__.TID_GasAnalysis_t2,gas__.TID_GasAnalysis_t0|} |]
+		      	          	          	  MemoryTransitions_opt_0(id__)
+		      	          	          	  )\{|internal__.TID_GasAnalysis_t1|})
+		      	          	          )
+		      	          	      	  [| {|set_ins,internal__.TID_GasAnalysis_t8,internal__.TID_GasAnalysis_t9a|} |]
+		      	          	      	  MemoryTransitions_opt_2(id__,
+		      	          	      	  	 const_GasAnalysis_thr)
+		      	          	      	  )\{|internal__.TID_GasAnalysis_t8,internal__.TID_GasAnalysis_t9a|})
+		      	          	      )
+		      	          	) \ {|set_ins,get_ins|}
+		      	          )
+		      	      	  [| {|internal__.TID_GasAnalysis_t4,internal__.TID_GasAnalysis_t3,set_st|} |]
+		      	      	  MemoryTransitions_opt_1(id__)
+		      	      	  )\{|internal__.TID_GasAnalysis_t4,internal__.TID_GasAnalysis_t3|})
+		      	      )
+		      	) \ {|get_st,set_st|}
+		      )
+	
+	-- main process
+	
+	MachineMemorySyncSet = Union({
+		union(
+			union(
+				{|get_st,set_st,
+				get_gs,set_gs,
+				get_ins,set_ins,
+				get_anl,set_anl|},
+				{||}
+			)
+				
+			,
+			{|internal__.TID_GasAnalysis_t1,
+			gas__.TID_GasAnalysis_t2,
+			internal__.TID_GasAnalysis_t3,
+			internal__.TID_GasAnalysis_t4,
+			internal__.TID_GasAnalysis_t8,
+			internal__.TID_GasAnalysis_t9a,
+			gas__.TID_GasAnalysis_t0|}
+		)
+	})
+	
+	MachineMemoryHidingSet = Union({
+		union(
+			{|get_st,set_st,
+			get_gs,set_gs,
+			get_ins,set_ins,
+			get_anl,set_anl|},
+			{||}
+		)
+	})
+	
+	MachineInternalEvents = {|
+		internal__
+	|}
+	
+	AUX(id__,
+			    const_GasAnalysis_thr) = (
+		(
+			STM(id__,
+					    const_GasAnalysis_thr)
+				[|MachineMemorySyncSet|]
+			sbisim(diamond(MemoryN(id__, const_GasAnalysis_thr)))
+		)[[
+			gas__.x____ <- gas,
+			resume__.x____ <- resume,
+			turn__.x____ <- turn,
+			stop__.x____ <- stop
+			| x____ <- TIDS
+		]]
+		\MachineMemoryHidingSet
+	)
+	[|{|terminate|}|>SKIP\MachineInternalEvents
+	
+	
+	STM_core(id__,
+			    const_GasAnalysis_thr) = 
+		sbisim(diamond(STM(id__,
+				    const_GasAnalysis_thr)))
+		
+	AUX_opt(id__,
+			    const_GasAnalysis_thr) = 
+		(MemorySTM_opt(id__,
+				    const_GasAnalysis_thr)
+		)[[
+			gas__.x____ <- gas,
+			resume__.x____ <- resume,
+			turn__.x____ <- turn,
+			stop__.x____ <- stop
+			| x____ <- TIDS
+		]]
+		[|{|terminate|}|>SKIP\MachineInternalEvents
+
+	-- definition of the behaviour of state machines (default, optimised, visible, visible and optimised)
+	transparent diamond
+	transparent sbisim
+	transparent dbisim
+	transparent chase
+			
+	FVS__(id__,
+			    const_GasAnalysis_thr) = AUX_opt(id__,
+			    const_GasAnalysis_thr)
+	Dunopt__(id__,
+			    const_GasAnalysis_thr) = AUX(id__,
+			    const_GasAnalysis_thr) \ internal_events
+	D__(id__,
+			    const_GasAnalysis_thr) = AUX_opt(id__,
+			    const_GasAnalysis_thr) \ internal_events
+	O__(id__,
+			    const_GasAnalysis_thr) = sbisim(diamond(D__(id__,
+			    const_GasAnalysis_thr)))
+	VS__(id__,
+			    const_GasAnalysis_thr) = ShowV(FVS__(id__,
+			    const_GasAnalysis_thr))
+	VS_O__(id__,
+			    const_GasAnalysis_thr) = sbisim(diamond(VS__(id__,
+			    const_GasAnalysis_thr)))
+	HEXT__(id__,
+			    const_GasAnalysis_thr) = O__(id__,
+			    const_GasAnalysis_thr) [|shared_variable_events|] SKIP	
+endmodule
+
+

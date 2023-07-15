@@ -1,0 +1,27 @@
+include "Location_defs.csp"
+include "function_toolkit_defs.csp"
+include "Chemical_defs.csp"
+include "relation_toolkit_defs.csp"
+include "set_toolkit_defs.csp"
+include "sequence_toolkit_defs.csp"
+include "core_defs.csp"
+include "timed_definitions.csp"
+include "Chemical_GasAnalysis.csp"
+include "robochart_defs.csp"
+include "../instantiations.csp"
+channel r__
+-- generate Chemical_GasAnalysis
+P_Chemical_GasAnalysis = let
+	id__ = 0
+	
+	
+	
+within
+	Chemical_GasAnalysis::O__(
+		id__,
+		const_Chemical_GasAnalysis_thr
+	)
+assert P_Chemical_GasAnalysis :[deadlock-free]	
+assert P_Chemical_GasAnalysis;RUN({r__}) :[deadlock-free]
+assert P_Chemical_GasAnalysis :[deterministic]
+assert P_Chemical_GasAnalysis :[divergence-free]

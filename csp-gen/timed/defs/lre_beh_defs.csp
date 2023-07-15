@@ -1,0 +1,8 @@
+-- data definitions used by platform:/resource/ChemicalDetector-autonomous8_use_case_R2/theory%20generation%20for%20LRE_2D%202022.09.20/lre_beh_2D.rct
+
+pre_lre_beh_dist(p,obs) = true
+pre_lre_beh_inOPEZ(p) = true
+pre_lre_beh_CDA(p,obs,v) = true
+pre_lre_beh_maneuv(v) = true
+pre_lre_beh_setVel(v,setpoint) = true
+	

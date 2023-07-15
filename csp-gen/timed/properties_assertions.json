@@ -1,0 +1,26 @@
+[
+{ "name": "Chemical::GasAnalysis is deterministic (A1) [failures divergences model]",
+  "type": "deterministic",
+  "negated": false 
+},
+{ "name": "Chemical::GasAnalysis is divergence free (A2) [failures divergences model]",
+  "type": "divergence-free",
+  "negated": false 
+},
+{ "name": "SpecA3 is deadlock free (A3) [failures divergences model]",
+  "type": "deadlock-free",
+  "negated": false 
+},
+{ "name": "Chemical::Movement is divergence free (A4) [failures divergences model]",
+  "type": "divergence-free",
+  "negated": false 
+},
+{ "name": "SpecA5 is deadlock free (A5) [failures divergences model]",
+  "type": "deadlock-free",
+  "negated": false 
+},
+{ "name": "SpecB3 is deadlock free (B3) [failures divergences model]",
+  "type": "deadlock-free",
+  "negated": false 
+}
+			]
